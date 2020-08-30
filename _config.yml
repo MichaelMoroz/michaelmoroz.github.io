@@ -3,13 +3,13 @@
 #
 
 # Name of your site (displayed in the header)
-name: Your Name
+name: Michael Moroz
 
 # Short bio or description (displayed in the header)
-description: Web Developer from Somewhere
+description: Computational physics, rendering and other random stuff
 
 # URL of your avatar or profile pic (you could use your GitHub profile pic)
-avatar: https://raw.githubusercontent.com/barryclark/jekyll-now/master/images/jekyll-logo.png
+avatar: https://avatars0.githubusercontent.com/u/47035925?s=460&u=25f77035733f0cfa2aee2c80513dffc258b738be&v=4
 
 #
 # Flags below are optional
@@ -19,16 +19,16 @@ avatar: https://raw.githubusercontent.com/barryclark/jekyll-now/master/images/je
 footer-links:
   dribbble:
   email:
-  facebook:
+  facebook: michael.moroz.92
   flickr:
   github: barryclark/jekyll-now
   instagram:
   linkedin:
   pinterest:
   rss: # just type anything here for a working RSS icon
-  twitter: jekyllrb
+  twitter: Michael_Moroz_
   stackoverflow: # your stackoverflow profile, e.g. "users/50476/bart-kiers"
-  youtube: # channel/<your_long_string> or user/<user-name>
+  youtube: channel/UChBNtA9Hy_DJUE9WXYdml4w
   googleplus: # anything in your profile username that comes after plus.google.com/
 
 
