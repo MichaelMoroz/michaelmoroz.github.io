@@ -259,7 +259,7 @@ Other interesting use cases are:
 * [Fluid advection](https://www.shadertoy.com/view/WtfyW7) with a pressure computed using the Poisson equation.
 * [Rocket Mach diamonds](https://www.shadertoy.com/view/3llcRj) - modelling supersonic gas using a gas equation of state.
 * [Slime molds](https://www.shadertoy.com/view/WtBcDG) - I should probably make a blog post on this too.
-* [Life-like cells](https://www.shadertoy.com/view/Wt2BR1) - ????.
+* [Life-like cells](https://www.shadertoy.com/view/Wt2BR1) - ????. Another post needed, yeah.
 
 ### References 
 [1] [Smoothed Particle Hydrodynamics](https://arxiv.org/pdf/1007.1245.pdf)
