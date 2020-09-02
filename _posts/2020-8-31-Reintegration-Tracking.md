@@ -254,7 +254,7 @@ There is nothing holding us from storing a more advanced description of the insi
 If I happen to successfully implement such a summation I will write a follow-up article, since perfect angular momentum tracking is really important for nice vortices.
 
 ### Conclusions
-This is a really cool algorithm, and I wanted to share it with other people the moment I had the first successful results, [Wyatt](https://www.shadertoy.com/user/wyatt) has already used it for some really cool simulation, including [multi-substance interactions](https://www.shadertoy.com/view/3lffzM). 
+This is a really cool algorithm, and I wanted to share it with other people the moment I had the first successful results, [Wyatt](https://www.shadertoy.com/user/wyatt) has already used it for some really cool simulations, including [multi-substance interactions](https://www.shadertoy.com/view/3lffzM). 
 Thanks to the mass conserving quality of the advection it can be used to model [self-gravitating gas](https://www.shadertoy.com/view/Wl2yWm) too (the angular momentum there is total whack tho, but looks cool)
 
 Other interesting use cases are:
