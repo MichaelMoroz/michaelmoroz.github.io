@@ -86,7 +86,7 @@ To combat the problem of a decreasing particle number we can try and divide each
 <img src="{{ site.baseurl }}/images/ParticleCA_div_frame1.JPG" style="width:250px;height:250px;">
 </center>
 
-The radius of the distribution defines how likely is the particle is to multiply. If the all the virtual particles end up inside of a single cell the particle would not divide and stay essentially the same(if the average particle of the virtual particles is equal to the original particle). To make it properly conservative we just need to need to divide the mass of the particle into a number of equal chunks, and make sure the distribution average is zero.
+The radius of the distribution defines how likely is the particle is to multiply. If the all the virtual particles end up inside of a single cell the particle would not divide and stay essentially the same(if the average particle of the virtual particles is equal to the original particle). To make it properly conservative we just need to divide the mass of the particle into a number of equal chunks, and make sure the distribution average is zero.
 
 On the picture above and in the code below we see an example for a 5 virtual particle distribution, the average of the distribution directions is zero and its radius is 0.1 pixels.
 
@@ -136,7 +136,7 @@ if(mass > 0.0) //if not vacuum
 }
 ```
 
-You might ask if its possible to achieve a perfect particle number conservation, and not just total mass conservation. Actually to do that we can just need to divide the mass into integer chunks that sum into the original mass, the virtual particles need not be the same, so for example one particle with mass 3 can divide into 2 particles with mass 2 and 1. Dividing into more than 2 virtual particles is pretty much the same, even though a bit more complicated. 
+You might ask if its possible to achieve a perfect particle number conservation, and not just total mass conservation. Actually to do that we just need to divide the mass into integer chunks that sum into the original mass, the virtual particles need not be the same, so for example one particle with mass 3 can divide into 2 particles with mass 2 and 1. Dividing into more than 2 virtual particles is pretty much the same, even though a bit more complicated. 
 
 ### Using particle distributions
 
