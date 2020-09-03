@@ -32,9 +32,9 @@ This algorithm is similar to a [lattice gas automaton](https://en.wikipedia.org/
 
 The main idea of the algorithm is to loop over all neighbors of the current cell(including itself), integrate the position of each neighbor particle and add it if it ends up in this cell. Above is a visualization of how it looks like. Each cell has a particle with a mass, the mass is shown by opacity, so 0 mass is invisible and 1 is completely dark. The red cell is our current cell for which we want to find its future state, the future position of the particles is shown by the arrow. We can see that there is more than one particle moving into the red cell. So in the end all the particles that end up in the same cell are summed and their positions and velocities are averaged. In mathematical form it can be written as:
 
-\\[ M_{i}^{t+1} = \sum_{j}^\textrm{neighbors} K_{i}(\vec{X}_ {j}^{t} + \Delta t \vec{V}_ {j}^{t}) m_{j}^{t}  -  \textrm{updated mass} \\] 
-\\[ \vec{X}_ {i}^{t+1} = \frac{1}{M_ {i}^{t+1}} \sum_{j}^\textrm{neighbors}  K_{i}(\vec{X}_ {j}^{t} + \Delta t \vec{V}_ {j}^{t}) (\vec{X}_ {j}^{t} + \Delta t \vec{V}_ {j}^{t}) m_{j}^{t}    -  \textrm{updated center of mass} \\] 
-\\[ \vec{V}_ {i}^{t+1} = \frac{1}{M_ {i}^{t+1}} \sum_{j}^\textrm{neighbors}  K_{i}(\vec{X}_ {j}^{t} + \Delta t \vec{V}_ {j}^{t})  \vec{V}_ {j}^{t} m_{j}^{t}  -  \textrm{updated velocity} \\] 
+\\[ M_{i}^{t+1} = \sum_{j}^\textrm{neighbors} K_{i}(\vec{X}_ {j}^{t} + \Delta t \vec{V}_ {j}^{t}) m_{j}^{t}  ---  \textrm{updated mass} \\] 
+\\[ \vec{X}_ {i}^{t+1} = \frac{1}{M_ {i}^{t+1}} \sum_{j}^\textrm{neighbors}  K_{i}(\vec{X}_ {j}^{t} + \Delta t \vec{V}_ {j}^{t}) (\vec{X}_ {j}^{t} + \Delta t \vec{V}_ {j}^{t}) m_{j}^{t}    ---  \textrm{updated center of mass} \\] 
+\\[ \vec{V}_ {i}^{t+1} = \frac{1}{M_ {i}^{t+1}} \sum_{j}^\textrm{neighbors}  K_{i}(\vec{X}_ {j}^{t} + \Delta t \vec{V}_ {j}^{t})  \vec{V}_ {j}^{t} m_{j}^{t}  ---  \textrm{updated velocity} \\] 
 Where \\(M_{i}^{t}\\) is the mass of the particle in cell i on time step t, \\(\vec{X}_ {i}^{t}\\) is the position of the particle and \\(\vec{V}_ {i}^{t}\\) is the velocity. The function \\(K_{i}(\vec{X})\\) is equal to 1 if the point \\(\vec{X}\\) is inside the cell i, and zero otherwise. \\( \Delta t \\) is the timestep.
 
 For a square cell the K function is simply
@@ -144,8 +144,8 @@ The previous algorithm did solve the problem sufficiently well, but did have som
 
 So to find the amount of mass (and its center) each particle deposits into this cell we need to integrate the distribution within the current cell bounds. (And that is where I got the name - *reintegrating tracked* particle distributions)
  Our equations are:
-\\[ M = \int \int_{\Omega} \rho(\vec{X})d\vec{X} -  \textrm{deposited mass} \\] 
-\\[ \vec{C} = \frac{1}{M} \int \int_{\Omega} \vec{X}\rho(\vec{X})d\vec{X} - \textrm{deposited center of mass} \\] 
+\\[ M = \int \int_{\Omega} \rho(\vec{X})d\vec{X} ---  \textrm{deposited mass} \\] 
+\\[ \vec{C} = \frac{1}{M} \int \int_{\Omega} \vec{X}\rho(\vec{X})d\vec{X} --- \textrm{deposited center of mass} \\] 
 Where \\( \Omega \\) is the cell region. But which distribution should we use? If we try to use a normal distribution we will end up with the problem of how to compute it, since there is no analytical solution for such an integral, and we would need to numerically integrate the distribution, which is not much better performance-wise than the previous algorithm. The simplest distribution that gives an analytical solution we can use is actually a uniform axis aligned box, for which the mass and the center of mass are trivial to compute analytically. We can also try a uniform circular distribution or a nonuniform circular distribution equal to \\( 1 - |\vec{X_0} - \vec{X}|^2 \\) for \\(  |\vec{X_0} - \vec{X}| \leqslant 1\\) and equal to \\( 0 \\) for \\(  |\vec{X_0} - \vec{X}| > 1 \\) where \\( \vec{X_0} \\) is the particle position, but let's try out the simplest approach.
 <center>
 <table>
@@ -229,8 +229,8 @@ Since it can model particle systems we can try to adapt particle algorithms here
 
 To implement SPH we just need to integrate the new cell velocity using the reintegrated particle distributions.
 
-\\[ \vec{V}_ {i}^{t+1} =  \vec{V}_ {i}^{t} +\Delta t  \frac{\vec{F}_ {i}}{M_ {i}^{t}}  -  \textrm{updated velocity} \\] 
-Where \\(\vec{F}_ {j}\\) is the computed SPH force [1] computed for the particle in cell j.
+\\[ \vec{V}_ {i}^{t+1} =  \vec{V}_ {i}^{t} +\Delta t  \frac{\vec{F}_ {i}}{M_ {i}^{t}}  ---  \textrm{updated velocity} \\] 
+Where \\(\vec{F}_ {j}\\) is the computed SPH force [1] computed for the particle in cell i.
 
 \\[ \vec{F}_ {i} =M_ {i}^{t} \sum_{j}^\textrm{neighbors} M_ {j}^{t} \left( \frac{P_{i}}{\rho_{i}^2} + \frac{P_{j}}{\rho_{j}^2} \right)  \nabla_{i} W(\vec{X}_ {j}^{t} - \vec{X}_ {i}^{t}) \\] 
 
