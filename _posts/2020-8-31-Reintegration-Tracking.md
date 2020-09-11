@@ -264,5 +264,7 @@ Other interesting use cases are:
 * [Slime molds](https://www.shadertoy.com/view/WtBcDG) - I should probably make a blog post on this too.
 * [Life-like cells](https://www.shadertoy.com/view/Wt2BR1) - ????. Another post needed, yeah.
 
+Also [here](https://github.com/MichaelMoroz/michaelmoroz.github.io/blob/master/files/ReintegrationTracking/ReintegrationTracking.pde) is a processing implementation of reintegration tracking (no SPH forces)
+
 ### References 
 [1] [Smoothed Particle Hydrodynamics](https://arxiv.org/pdf/1007.1245.pdf)
