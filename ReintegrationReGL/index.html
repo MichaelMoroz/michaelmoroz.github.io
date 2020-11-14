@@ -8,7 +8,6 @@
 <script>(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 
 var canvas = document.body.appendChild(document.createElement('canvas'));
-
 var regl = require('regl')({
   pixelRatio: Math.min(window.devicePixelRatio, 0.5),
   attributes: {
@@ -37,12 +36,19 @@ aspect = 1.0;
 
 var params = {
   dt: 0.75, dtrange: [0, 1],
-  N: 1, Nrange: [1, 64],
-  frametime: 0
+  N: 3, Nrange: [1, 50],
+  frametime: 0,
+  PN: 1,
+  rho: 0.75, rhorange: [0., 1.5],
+  solid: true,
+  elastic_lambda: 5.0, elrange: [0., 20.],
+  elastic_mu: 5.0, emrange: [0., 20.],
+  fluid_p: 0.4, fprange: [0., 3.],
+  diffusion: 0.13, dirange: [0., 3.]
 };
 
 var controlKit = new ControlKit();
-controlKit.addPanel({ label: 'Simulation parameters', width: 250 }).addGroup().addSubGroup().addSlider(params, 'dt', 'dtrange', { label: "Time step" }).addSlider(params, 'N', 'Nrange', { step: 1, dp: 0, label: "Iterations per frame" }).addButton('Restart', function () {
+controlKit.addPanel({ label: 'Simulation parameters', width: 350 }).addGroup().addSubGroup().addSlider(params, 'dt', 'dtrange', { label: "Time step" }).addSlider(params, 'N', 'Nrange', { step: 1, dp: 0, label: "Iterations per frame" }).addSlider(params, 'rho', 'rhorange', { label: "Density" }).addCheckbox(params, 'solid', { label: "Is solid" }).addSlider(params, 'elastic_lambda', 'elrange', { label: "Elastic Lambda" }).addSlider(params, 'elastic_mu', 'emrange', { label: "Elastic Mu" }).addSlider(params, 'fluid_p', 'fprange', { label: "Fluid Pressure" }).addSlider(params, 'diffusion', 'dirange', { label: "Diffusion" }).addButton('Restart', function () {
   frame = 0;
 });
 //.addValuePlotter(params, 'frametime', {label: 'Frame time', height: 100})
@@ -60,41 +66,78 @@ function ColorArr(W, H, N) {
 
 var default_vertex = glslify(["precision mediump float;\n#define GLSLIFY 1\nattribute vec2 position;\nvarying vec2 uv;\nvoid main() {\n  uv = 0.5 * (position + 1.0);\n  gl_Position = vec4(position, 0, 1);\n}"]);
 
-simW = 512;simH = 512;Ncomp = 2;
+simW = 256;simH = 128;
 
 //mouse wheel scaling 
 mw(function (dx, dy) {
   scale = scale * (1. + 0.3 * dy / H);
 });
 
-fbo0 = regl.framebuffer({ color: ColorArr(simW, simH, Ncomp), depth: false });
-fbo1 = regl.framebuffer({ color: ColorArr(simW, simH, Ncomp), depth: false });
-
-//interpolated densities
-fbo2 = regl.framebuffer({
-  color: [regl.texture({
-    width: simW,
-    height: simH,
-    type: 'float32',
-    mag: 'linear'
-  })],
-  depth: false
-});
+fbo0 = regl.framebuffer({ color: ColorArr(simW, simH, 3), depth: false });
+fbo1 = regl.framebuffer({ color: ColorArr(simW, simH, 3), depth: false });
+fbo2 = regl.framebuffer({ color: ColorArr(simW, simH, 2), depth: false });
 
 var Reintegration = regl({
-  frag: glslify(["#extension GL_EXT_draw_buffers : require\nprecision mediump float;\n#define GLSLIFY 1\n\n#define T0(p) texture2D(iChannel0, mod(p,R)/R)\n#define T1(p) texture2D(iChannel1, mod(p,R)/R)\n\n//useful defines\n#define loop(i,x) for(int i = 0; i < x; i++)\n#define range(i,a,b) for(int i = a; i <= b; i++)\n\nvarying vec2 uv;\nuniform int iFrame;\nuniform sampler2D iChannel0;\nuniform sampler2D iChannel1;\nuniform vec2 R;\nuniform float dt;\nvoid main () {\n  vec2 p = floor(vec2(R)*uv);\n  vec4 pv; float m;\n\n  range(i, -1, 1) range(j, -1, 1)\n  {\n    vec2 dp = vec2(i,j);\n    vec4 pv0 = T0(p + dp);\n    vec4 m0 = T1(p + dp); \n    \n    //dynamic distribution size\n    vec2 K = clamp(1.0 - 2.0*abs(pv0.xy), 0.01, 1.0) + 0.*dt;\n    \n    //update particle position in time and relative to cur cell\n    pv0.xy += dp + dt*pv0.zw;\n\n    //box overlaps\n    vec4 aabbX = vec4(max(-vec2(0.5), pv0.xy - K*0.5), min(vec2(0.5), pv0.xy + K*0.5)); //overlap aabb\n    vec2 center = 0.5*(aabbX.xy + aabbX.zw); //center of mass\n    vec2 size = max(aabbX.zw - aabbX.xy, 0.); //only positive\n\n    //the deposited mass into this cell\n    float dm = m0.x*size.x*size.y/(K.x*K.y); \n\n    pv += vec4(center, pv0.zw)*dm;\n    m += dm;\n  }\n\n  if(m > 0.0) \n  {\n    pv/=m;\n  }\n\n  if(iFrame < 5)\n  {\n    m = 0.5 + 0.5*sin(p.x*0.1)*sin(p.y*0.1);\n  }\n\n  gl_FragData[0] = pv;\n  gl_FragData[1] = vec4(m, 0.0, 0.0, 0.0);\n}"]),
+  frag: glslify(["#extension GL_EXT_draw_buffers : require\nprecision mediump float;\n#define GLSLIFY 1\n\n#define T0(p) texture2D(iChannel0, mod(p,R)/R)\n#define T1(p) texture2D(iChannel1, mod(p,R)/R)\n#define T2(p) texture2D(iChannel2, mod(p,R)/R)\n#define T3(p) texture2D(iChannel3, mod(p,R)/R)\n#define T4(p) texture2D(iChannel4, mod(p,R)/R)\n//useful defines\n#define loop(i,x) for(int i = 0; i < x; i++)\n#define range(i,a,b) for(int i = a; i <= b; i++)\n\nvarying vec2 uv;\nuniform int iFrame;\nuniform sampler2D iChannel0;\nuniform sampler2D iChannel1;\nuniform sampler2D iChannel2;\nuniform sampler2D iChannel3;\nuniform sampler2D iChannel4;\nuniform vec2 R;\nuniform float dt;\nuniform float diffusion;\nuniform float rho;\nvoid main () {\n  vec2 p = floor(vec2(R)*uv);\n  vec4 pv = vec4(0); float m = 0.; \n  mat2 stress = mat2(0);\n  //deformation gradient \n  mat2 dgrad = mat2(0.);\n  //velocity gradient\n  mat2 vgrad = mat2(0.);\n\n  range(i, -1, 1) range(j, -1, 1)\n  {\n    vec2 dp = vec2(i,j);\n    vec4 pv0 = T0(p + dp);\n    vec4 m0 = T1(p + dp); \n    mat2 dgrad0 = mat2(T2(p + dp)); \n    mat2 vgrad0 = mat2(T3(p + dp)); \n    //dynamic distribution size\n    vec2 K = clamp(1.0 - 2.0*abs(pv0.xy), 0.001, 1.0) + clamp(diffusion*abs(m0.y), 0., 0.5)*dt;\n    //update particle position in time and relative to cur cell\n    pv0.xy += dp + dt*pv0.zw;\n\n    //box overlaps\n    vec4 aabbX0 = clamp(vec4(pv0.xy - K*0.5, pv0.xy + K*0.5), vec4(-0.5), vec4(0.5)); //overlap aab\n    vec2 size = aabbX0.zw - aabbX0.xy; \n    vec2 center = 0.5*(aabbX0.xy + aabbX0.zw);\n    //the deposited mass into this cell\n    float dm = m0.x*size.x*size.y/(K.x*K.y);\n    vec2 dx = center - pv0.xy;\n\n    dgrad += dgrad0*dm;\n    pv += vec4(center, pv0.zw + vgrad*dx)*dm;\n    m += dm;\n  }\n\n  if(m > 0.0) \n  {\n    dgrad/=m;\n    vgrad/=m;\n    pv/=m;\n  }\n  else \n  {\n    dgrad = mat2(1.);\n  }\n\n  if(iFrame < 5)\n  {\n    m = smoothstep(R.x*0.6, R.x*0.5, p.x)*(0.5 + 0.5*sin(p.x*0.1)*sin(p.y*0.1));\n    pv = vec4(0); \n    dgrad = mat2(1.);\n  }\n\n  vec4 pstress = T4(p);\n  //clamp the gradient to not go insane\n  dgrad = mat2(clamp(vec4(dgrad - mat2(1.)), vec4(-4.0), vec4(4.0))) + mat2(1.);\n\n  gl_FragData[0] = pv;\n  gl_FragData[1] = vec4(m, abs(pstress.x)  + abs(pstress.w), 0.0, 0.0);\n  gl_FragData[2] = vec4(dgrad);\n}"]),
   vert: default_vertex,
   attributes: { position: [-4, -4, 4, -4, 0, 4] },
   framebuffer: fbo0,
   uniforms: {
-    iChannel0: fbo1.color[0],
-    iChannel1: fbo1.color[1],
+    iChannel0: fbo2.color[0],
+    iChannel1: fbo2.color[1],
+    iChannel2: fbo1.color[0],
+    iChannel3: fbo1.color[1],
+    iChannel4: fbo1.color[2],
     iFrame: function () {
       return frame;
     },
     R: [simW, simH],
     dt: function () {
       return params.dt;
+    },
+    rho: function () {
+      return params.rho;
+    },
+    diffusion: function () {
+      return params.diffusion;
+    }
+  },
+  depth: { enable: false },
+  count: 3
+});
+
+var DeformationGrad = regl({
+  frag: glslify(["#extension GL_EXT_draw_buffers : require\nprecision mediump float;\n#define GLSLIFY 1\n\nvarying vec2 uv;\nuniform int iFrame;\nuniform sampler2D iChannel0;\nuniform sampler2D iChannel1;\nuniform sampler2D iChannel2;\nuniform sampler2D iChannel3;\nuniform sampler2D iChannel4;\nuniform vec2 R;\nuniform float dt;\n\nuniform bool solid;\nuniform float rho;\nuniform float elastic_lambda;\nuniform float elastic_mu;\nuniform float fluid_p;\n\n//new pv\n#define T0(p) texture2D(iChannel0, mod(p,R)/R)\n//new m\n#define T1(p) texture2D(iChannel1, mod(p,R)/R)\n//new dgrad\n#define T2(p) texture2D(iChannel2, mod(p,R)/R)\n//old pv\n#define T3(p) texture2D(iChannel3, mod(p,R)/R)\n//old m\n#define T4(p) texture2D(iChannel4, mod(p,R)/R)\n\n//useful functions\n#define GS(x) exp(-dot(x,x))\n#define GS0(x) exp(-length(x))\n#define CI(x) smoothstep(1.0, 0.9, length(x))\n#define Dir(ang) vec2(cos(ang), sin(ang))\n#define Rot(ang) mat2(cos(ang), sin(ang), -sin(ang), cos(ang))\n#define loop(i,x) for(int i = 0; i < x; i++)\n#define range(i,a,b) for(int i = a; i <= b; i++)\n\nfloat determinant( in mat2 m ) { return m[0][0]*m[1][1] - m[0][1]*m[1][0]; }\nmat2 transpose( in mat2 m ) { return mat2(m[0].x, m[1].x, m[0].y, m[1].y); }\nmat2 inverse(in mat2 m) { return mat2(m[1][1],-m[0][1], -m[1][0], m[0][0]) / (m[0][0]*m[1][1] - m[0][1]*m[1][0]); }\n\nmat2 strain(mat2 D)\n{\n    float J = abs(determinant(D)) + 0.001;\n\n    // MPM course, page 46\n    float volume = J;\n\n    // useful matrices for Neo-Hookean model\n    mat2 F_T = transpose(D);\n    mat2 F_inv_T = inverse(F_T);\n    mat2 F_minus_F_inv_T = D - F_inv_T;\n\n    // MPM course equation 48\n    mat2 P_term_0 = elastic_mu * (F_minus_F_inv_T);\n    mat2 P_term_1 = elastic_lambda * log(J) * F_inv_T;\n    mat2 P = P_term_0 + P_term_1;\n\n    // equation 38, MPM course\n    mat2 stress = (1./J)* P * F_T;\n\n    return volume * stress;\n}\n\nvoid main () {\n  vec2 p = floor(vec2(R)*uv);\n  vec4 pv = T0(p); \n  vec4 m = T1(p);\n  mat2 dgrad = mat2(T2(p));\n  //velocity gradient\n  mat2 vgrad = mat2(0.);\n  mat2 stress = mat2(0.);\n\n  if(m.x > 0.0)\n  {  \n    float m1 = 0.;\n    range(i, -1, 1) range(j, -1, 1)\n    {\n      vec2 dp = vec2(i,j);\n      vec4 pv0 = T3(p + dp);\n      vec4 m0 = T4(p + dp);\n      \n      //dynamic distribution size\n      vec2 K = vec2(1.5);\n      //update particle position in time and relative to cur cell\n      pv0.xy += dp + dt*pv0.zw;\n\n      //box overlaps\n      vec4 aabbX0 = clamp(vec4(pv0.xy - K*0.5, pv0.xy + K*0.5), vec4(-0.5), vec4(0.5)); //overlap aab\n      vec2 size = aabbX0.zw - aabbX0.xy; \n\n      //the deposited mass into this cell\n      float dm = m0.x*size.x*size.y/(K.x*K.y);\n      \n      //delta new old\n      vec2 dx = pv0.xy - pv.xy;\n      vec2 dv = pv0.zw - pv.zw; \n\n      vgrad += mat2(dv*dx.x,dv*dx.y)*dm;\n      m1 += dm;\n    }\n    \n    vgrad /= m1;\n\n    vec2 K0 = clamp(1.0 - 2.0*abs(pv.xy), 0.001, 1.0);\n    float drho = m.x/(K0.x*K0.y) - rho;\n    vgrad -= 0.004*mat2(drho)*abs(drho);\n\n    //integrate deformation gradient\n    dgrad += dt*vgrad*dgrad;\n\n    float r = 0.002;\n    //dgrad = dgrad*(1. - r) + mat2(1.)*r;\n    \n    if(solid)\n    {\n      //solid\n      stress = strain(dgrad); \n    }\n    else\n    {\n      //fluid\n      stress = mat2(-fluid_p*(m1 - rho));\n      dgrad = mat2(1.);\n    }\n  }\n\n  gl_FragData[0] = vec4(dgrad);\n  gl_FragData[1] = vec4(vgrad);\n  gl_FragData[2] = clamp(vec4(stress), -4.0, 4.0);\n}"]),
+  vert: default_vertex,
+  attributes: { position: [-4, -4, 4, -4, 0, 4] },
+  framebuffer: fbo1,
+  uniforms: {
+    iChannel0: fbo0.color[0],
+    iChannel1: fbo0.color[1],
+    iChannel2: fbo0.color[2],
+    iChannel3: fbo2.color[0],
+    iChannel4: fbo2.color[1],
+    iFrame: function () {
+      return frame;
+    },
+    R: [simW, simH],
+    dt: function () {
+      return params.dt;
+    },
+    rho: function () {
+      return params.rho;
+    },
+    solid: function () {
+      return Boolean(params.solid);
+    },
+    elastic_lambda: function () {
+      return params.elastic_lambda;
+    },
+    elastic_mu: function () {
+      return params.elastic_mu;
+    },
+    fluid_p: function () {
+      return params.fluid_p;
     }
   },
   depth: { enable: false },
@@ -102,13 +145,14 @@ var Reintegration = regl({
 });
 
 var MomentumUpdate = regl({
-  frag: glslify(["#extension GL_EXT_draw_buffers : require\nprecision mediump float;\n#define GLSLIFY 1\n\n#define T0(p) texture2D(iChannel0, mod(p,R)/R)\n#define T1(p) texture2D(iChannel1, mod(p,R)/R)\n\n//useful functions\n#define GS(x) exp(-dot(x,x))\n#define GS0(x) exp(-length(x))\n#define CI(x) smoothstep(1.0, 0.9, length(x))\n#define Dir(ang) vec2(cos(ang), sin(ang))\n#define Rot(ang) mat2(cos(ang), sin(ang), -sin(ang), cos(ang))\n#define loop(i,x) for(int i = 0; i < x; i++)\n#define range(i,a,b) for(int i = a; i <= b; i++)\n\nvarying vec2 uv;\nuniform int iFrame;\nuniform sampler2D iChannel0;\nuniform sampler2D iChannel1;\nuniform vec2 R;\nuniform float dt;\n\nvec3 minc(vec3 a, vec3 b)\n{\n  return (a.z > b.z)?b:a;\n}\n\nvec3 border(vec2 p)\n{\n  return minc(minc(vec3(0.0, -1.0, R.y - p.y), vec3(0.0, 1.0, p.y)),\n              minc(vec3(-1.0, 0.0, R.x - p.x), vec3(1.0, 0.0, p.x)));\n}\n\nvoid main () {\n  vec2 p = floor(vec2(R)*uv);\n  vec4 pv = T0(p); \n  vec4 m = T1(p);\n  if(m.x > 0.0)\n  {\n    vec2 F = vec2(0., 0.); \n\n    range(i, -2, 2) range(j, -2, 2)\n    {\n      vec2 dp = vec2(i,j);\n      vec4 pv0 = T0(p + dp);\n      vec4 m0 = T1(p + dp); \n\n      vec2 dx = pv0.xy + dp - pv.xy;\n      vec2 dv = pv0.zw - pv.zw;\n      F -= m.x*m0.x*(0.1*dx*(0.5*(m.x+m0.x) - 0.76) - 0.25*dx*dot(dx,dv))*GS(dx);\n    }\n\n    //gravity\n    F += m.x*vec2(0., -0.004);\n    pv.zw += dt*F/m.x;\n    \n    //border\n    vec3 b = border(pv.xy+p);\n    pv.zw += 3.*b.xy*smoothstep(10., 2., b.z);\n\n    //velocity limit\n    float v = length(pv.zw);\n    pv.zw /= (v > 1.)?1.*v:1.;\n  }\n  // just output geometry data.\n  gl_FragData[0] = pv;\n  gl_FragData[1] = m;\n}"]),
+  frag: glslify(["#extension GL_EXT_draw_buffers : require\nprecision mediump float;\n#define GLSLIFY 1\n\n#define T0(p) texture2D(iChannel0, mod(p,R)/R)\n#define T1(p) texture2D(iChannel1, mod(p,R)/R)\n#define T2(p) texture2D(iChannel2, mod(p,R)/R)\n#define T3(p) texture2D(iChannel3, mod(p,R)/R)\n\n//useful functions\n#define GS(x) exp(-dot(x,x))\n#define GS0(x) exp(-length(x))\n#define CI(x) smoothstep(1.0, 0.9, length(x))\n#define Dir(ang) vec2(cos(ang), sin(ang))\n#define Rot(ang) mat2(cos(ang), sin(ang), -sin(ang), cos(ang))\n#define loop(i,x) for(int i = 0; i < x; i++)\n#define range(i,a,b) for(int i = a; i <= b; i++)\n\nvarying vec2 uv;\nuniform int iFrame;\nuniform sampler2D iChannel0;\nuniform sampler2D iChannel1;\nuniform sampler2D iChannel2;\nuniform sampler2D iChannel3;\nuniform vec2 R;\nuniform float dt;\n\nvec3 minc(vec3 a, vec3 b)\n{\n  return (a.z > b.z)?b:a;\n}\n\nvec3 border(vec2 p)\n{\n  return minc(minc(vec3(0.0, -1.0, R.y - p.y), vec3(0.0, 1.0, p.y)),\n              minc(vec3(-1.0, 0.0, R.x - p.x), vec3(1.0, 0.0, p.x)));\n}\n\nvoid main () {\n  vec2 p = floor(vec2(R)*uv);\n  vec4 pv = T0(p); \n  vec4 m = T1(p);\n  mat2 stress0 = mat2(T2(p));\n  if(m.x > 0.0)\n  {\n    vec2 F = vec2(0., 0.);\n    float k = 0.001;\n    range(i, -1,1) range(j, -1,1)\n    {\n      vec2 dp = vec2(i,j);\n      vec4 pv0 = T0(p + dp);\n      vec4 m0 = T1(p + dp); \n      mat2 stress1 = mat2(T2(p + dp));\n      vec2 dx = pv0.xy + dp - pv.xy;\n      vec2 dv = pv0.zw - pv.zw;\n      float K = GS(dx);\n      stress1 = (m.x*stress0 + m0.x*stress1)/(m.x + m0.x) + mat2(0.1*dot(dx,dv));\n      F += m.x*m0.x*stress1*dx*K;\n      k += K;\n    }\n    F /= k;\n    //gravity\n    F += m.x*vec2(0., -0.003);\n    F = clamp(F, -0.5, 0.5);\n    pv.zw += dt*F/m.x;\n    \n    //border\n    vec3 b = border(pv.xy+p);\n    pv.zw += clamp(-dot(b.xy,pv.zw) + 0.01, 0., 1.)*b.xy*smoothstep(10., 2., b.z);\n\n    //velocity limit\n    float v = length(pv.zw);\n    pv.zw /= (v > 1.)?1.*v:1.;\n  }\n\n  // just output geometry data.\n  gl_FragData[0] = pv;\n  gl_FragData[1] = m;\n}"]),
   vert: default_vertex,
   attributes: { position: [-4, -4, 4, -4, 0, 4] },
-  framebuffer: fbo1,
+  framebuffer: fbo2,
   uniforms: {
     iChannel0: fbo0.color[0],
     iChannel1: fbo0.color[1],
+    iChannel2: fbo1.color[2],
     iFrame: function () {
       return frame;
     },
@@ -123,10 +167,10 @@ var MomentumUpdate = regl({
 
 var Image = regl({
   vert: default_vertex,
-  frag: glslify(["precision mediump float;\n#define GLSLIFY 1\n\n#define T0(p) texture2D(iChannel0, mod(p,R)/R)\n#define T1(p) texture2D(iChannel1, mod(p,R)/R)\n\n//useful defines\n#define loop(i,x) for(int i = 0; i < x; i++)\n#define range(i,a,b) for(int i = a; i <= b; i++)\n#define GS(x) exp(-dot(x,x))\n\nvarying vec2 uv;\nuniform sampler2D iChannel0;\nuniform sampler2D iChannel1;\nuniform int iFrame;\nuniform float scale;\nuniform vec2 iPos;\nuniform float aspect;\nuniform vec2 R;\nvoid main () {\n    vec2 p = (uv - 0.5)*scale*vec2(aspect, 1.0) + 0.5 - iPos;\n    float border = step(0., p.x)*step(p.x, 1.)*\n                   step(0., p.y)*step(p.y, 1.);\n    float rho = 0.;\n    p*=R;\n    range(i, -2, 2) range(j, -2, 2)\n    {\n      vec2 dp = vec2(i,j);\n      vec4 pv0 = T0(p + dp);\n      vec4 m0 = T1(p + dp); \n\n      vec2 dx = pv0.xy + dp - fract(p) + 0.5;\n      rho += m0.x*GS(dx);\n    }\n    gl_FragColor = border*vec4(0.1*rho);\n}"]),
+  frag: glslify(["precision mediump float;\n#define GLSLIFY 1\n\n#define T0(p) texture2D(iChannel0, mod(p,R)/R)\n#define T1(p) texture2D(iChannel1, mod(p,R)/R)\n\n//useful defines\n#define loop(i,x) for(int i = 0; i < x; i++)\n#define range(i,a,b) for(int i = a; i <= b; i++)\n#define GS(x) exp(-dot(x,x))\n\nvarying vec2 uv;\nuniform sampler2D iChannel0;\nuniform sampler2D iChannel1;\nuniform int iFrame;\nuniform float scale;\nuniform vec2 iPos;\nuniform float aspect;\nuniform vec2 R;\n\nfloat sdBox( in vec2 p, in vec2 b )\n{\n    vec2 d = abs(p)-b;\n    return length(max(d,0.0)) + min(max(d.x,d.y),0.0);\n}\n\nvoid main () {\n    vec2 p = ((uv - 0.5)*scale*vec2(aspect, 1.0) + 0.5 - iPos)*vec2(R.y/R.x, 1.0);\n    float border = step(0., p.x)*step(p.x, 1.)*\n                   step(0., p.y)*step(p.y, 1.);\n    p*=R;\n    vec2 pi = floor(p);\n    vec4 pv = T0(pi);\n    vec4 m = T1(pi); \n    p -= 0.5;\n    vec2 dsize = clamp(1.0 - 2.0*abs(pv.xy), 0.001, 1.0);\n    pv.xy += pi;\n    float bsdf = sdBox(p - pv.xy,0.5*dsize);\n    float rho = m.x*smoothstep(0.2, -0.2, bsdf)/(dsize.x*dsize.y);\n     gl_FragColor = border*vec4(rho);\n}"]),
   uniforms: {
-    iChannel0: fbo1.color[0],
-    iChannel1: fbo1.color[1],
+    iChannel0: fbo2.color[0],
+    iChannel1: fbo2.color[1],
     iFrame: function () {
       return frame;
     },
@@ -153,6 +197,7 @@ regl.frame(function () {
   regl.clear({ color: [0.1, 0.1, 0.1, 1] });
   for (i = 0; i < params.N; i++) {
     Reintegration();
+    DeformationGrad();
     MomentumUpdate();
   }
   Image();

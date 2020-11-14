@@ -16,20 +16,26 @@ uniform float scale;
 uniform vec2 iPos;
 uniform float aspect;
 uniform vec2 R;
+
+
+float sdBox( in vec2 p, in vec2 b )
+{
+    vec2 d = abs(p)-b;
+    return length(max(d,0.0)) + min(max(d.x,d.y),0.0);
+}
+
 void main () {
-    vec2 p = (uv - 0.5)*scale*vec2(aspect, 1.0) + 0.5 - iPos;
+    vec2 p = ((uv - 0.5)*scale*vec2(aspect, 1.0) + 0.5 - iPos)*vec2(R.y/R.x, 1.0);
     float border = step(0., p.x)*step(p.x, 1.)*
                    step(0., p.y)*step(p.y, 1.);
-    float rho = 0.;
     p*=R;
-    range(i, -2, 2) range(j, -2, 2)
-    {
-      vec2 dp = vec2(i,j);
-      vec4 pv0 = T0(p + dp);
-      vec4 m0 = T1(p + dp); 
-
-      vec2 dx = pv0.xy + dp - fract(p) + 0.5;
-      rho += m0.x*GS(dx);
-    }
-    gl_FragColor = border*vec4(0.1*rho);
+    vec2 pi = floor(p);
+    vec4 pv = T0(pi);
+    vec4 m = T1(pi); 
+    p -= 0.5;
+    vec2 dsize = clamp(1.0 - 2.0*abs(pv.xy), 0.001, 1.0);
+    pv.xy += pi;
+    float bsdf = sdBox(p - pv.xy,0.5*dsize);
+    float rho = m.x*smoothstep(0.2, -0.2, bsdf)/(dsize.x*dsize.y);
+     gl_FragColor = border*vec4(rho);
 }
