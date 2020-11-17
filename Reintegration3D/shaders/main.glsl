@@ -83,8 +83,13 @@ void main () {
     vec3 rd = normalize(camx + (UV.x*aspect*camy + UV.y*camz)*FOV);
     //camera position
     vec3 ro = R3D*0.5 - 0.5*scale*length(R3D)*camx;
-
+    
     vec2 td = boxIntersection(ro-R3D*0.5, rd, R3D*0.5);
+    if(all(greaterThan(ro, vec3(0.))) && all(lessThan(ro, R3D)))
+    {
+        td.x = 0.;        
+    }
+
     vec3 ro1 = ro + td.x*rd; 
     
     if(td.x != -1.0)

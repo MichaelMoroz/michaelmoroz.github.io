@@ -225,6 +225,13 @@ function InitializeFBOs()
     depth: false});
 }
 
+function ClearFBOs()
+{
+  fbo0.destroy();
+  fbo1.destroy();
+  fbo2.destroy();
+}
+
 function ClearGL()
 {
   Reintegration.destroy();
@@ -241,6 +248,7 @@ var controlKit = new ControlKit();
                                             onChange:function(index){sim_resolution = resolutions2d[index];
                                                                      sim_resolution3d = resolutions3d[index];
                                                                      frame = 0;
+                                                                     ClearFBOs();
                                                                      InitializeFBOs();
                                                                     }})
                   .addSlider(params, 'dt', 'dtrange', {label: "Time step"})
