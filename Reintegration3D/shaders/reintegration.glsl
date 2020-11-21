@@ -53,7 +53,8 @@ void main () {
     mat3 dgrad0 = mat3(V3(p + dp), V4(p + dp), V5(p + dp));
     
     //dynamic distribution size
-    vec3 K = clamp(1.0 - 2.0*abs(p0), 0.001, 1.0) + clamp(diffusion, 0., 0.1)*dt;
+    vec3 K = clamp(1.0 - 2.0*abs(p0), 0.00001, 1.0);
+    K += K*clamp(diffusion, 0., 0.1)*dt;
     
     //update particle position in time and relative to cur cell
     p0 += dp + dt*v0;
@@ -71,7 +72,7 @@ void main () {
     p1 += center*dm;
     v1 += v0*dm;
     m1 += dm;
-    float k0 = GS(0.5*p0);
+    float k0 = GS(0.75*dp);
     a += k0;
     mi += m0.x*k0/(K.x*K.y*K.z);
   }
@@ -90,7 +91,7 @@ void main () {
 
   if(iFrame < 5)
   {
-    m1 = rho*smoothstep(R3D.z*0.5, R3D.z*0.6, p.z)*smoothstep(R3D.x*0.6, R3D.x*0.5, p.x)*(0.5 + 0.5*sin(p.x*0.3)*sin(p.y*0.3)*sin(p.z*0.3));
+    m1 = rho*smoothstep(R3D.x*0.6, R3D.x*0.5, p.x)*(0.5 + 0.5*sin(p.x*0.3)*sin(p.y*0.3)*sin(p.z*0.3));
     p1 = vec3(0);
     v1 = vec3(0); 
     dgrad1 = mat3(1.);

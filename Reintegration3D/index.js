@@ -25,6 +25,7 @@ vec3 = require('gl-vec3');
 const glslify = require('glslify');
 
 var ControlKit = require('controlkit');
+const keyboardKey = require('keyboard-key');
 
 frame = 0;
 scale = 1.0;
@@ -45,7 +46,7 @@ var params = {
   solid: true,
   elastic_lambda: 15.0, elrange: [0., 60.],
   elastic_mu: 25.0, emrange: [0., 60.],
-  fluid_p: 0.4, fprange: [0., 3.],
+  fluid_p: 2.0, fprange: [0., 5.],
   diffusion: 0.03, dirange: [0., 3.],
   options: ['64x64x16','64x64x64','128x128x16','128x128x64','256x256x16','256x256x64', '256x256x256'], 
   selection : null 
@@ -64,6 +65,7 @@ var DeformationGrad;
 var MomentumUpdate;
 var Image;
 var fbo0; var fbo1; var fbo2;
+var CamPos = [0,0,0];
 
 const default_vertex = glslify.file('./shaders/vertex.glsl');
 
@@ -168,7 +170,8 @@ function Initialize()
       aspect: function(){return aspect},
       R: function(){return sim_resolution},
       R3D: function(){return sim_resolution3d},
-      T: function(){return [sim_resolution[0]/sim_resolution3d[0], sim_resolution[1]/sim_resolution3d[1]]}
+      T: function(){return [sim_resolution[0]/sim_resolution3d[0], sim_resolution[1]/sim_resolution3d[1]]},
+      CamPos: function(){return CamPos}
     },
     attributes: {position: [ -4, -4, 4, -4, 0, 4 ]},
     depth: { enable: false },
@@ -268,6 +271,19 @@ time1 = new Date().getTime();
 
 Initialize();
 InitializeFBOs();
+PI = 3.14159265;
+
+KEYS = [];
+
+document.addEventListener('keydown', event => {
+  const code = kb.getCode(event);
+  KEYS[code] = true;
+})
+
+document.addEventListener('keyup', event => {
+  const code = kb.getCode(event);
+  KEYS[code] = false;
+})
 
 regl.frame(() => {
   regl.clear({color: [0.1, 0.1, 0.1, 1]});
@@ -285,10 +301,11 @@ regl.frame(() => {
   }
   Image({ch0: fbo2.color[0], ch1: fbo2.color[2], ch2: fbo2.color[3]});
  
+
   if(mb.left)
   {
-    DX = DX + scale*(mp[0] - mp.prev[0])/W;
-    DY = DY + scale*(mp[1] - mp.prev[1])/H;
+    DX = DX - (mp[0] - mp.prev[0])/W;
+    DY = DY + (mp[1] - mp.prev[1])/H;
   }
   frame++;
   regl
@@ -299,4 +316,35 @@ regl.frame(() => {
   time0 = time1;
   time1 = new Date().getTime();
   params.frametime = time1 - time0; 
+
+  var angle = [PI*DX, -PI*0.5*DY];
+  var CamX = [Math.cos(angle[0])*Math.cos(angle[1]), Math.sin(angle[0])*Math.cos(angle[1]), Math.sin(angle[1])];
+  var CamY = [Math.sin(angle[0]), -Math.cos(angle[0]), 0.0];
+
+  if(KEYS[keyboardKey.W])
+  {
+    CamPos[0] += scale*CamX[0];
+    CamPos[1] += scale*CamX[1];
+    CamPos[2] += scale*CamX[2];
+  }
+  if(KEYS[keyboardKey.S])
+  {
+    CamPos[0] -= scale*CamX[0];
+    CamPos[1] -= scale*CamX[1];
+    CamPos[2] -= scale*CamX[2];
+  }
+  if(KEYS[keyboardKey.A])
+  {
+    CamPos[0] -= scale*CamY[0];
+    CamPos[1] -= scale*CamY[1];
+    CamPos[2] -= scale*CamY[2];
+  }
+  if(KEYS[keyboardKey.D])
+  {
+    CamPos[0] += scale*CamY[0];
+    CamPos[1] += scale*CamY[1];
+    CamPos[2] += scale*CamY[2];
+  }
+
+  mp.flush();
 });

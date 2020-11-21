@@ -113,19 +113,21 @@ void main () {
     range(i, -1, 1) range(j, -1, 1) range(k, -1, 1)
     {
       vec3 dp = vec3(i,j,k);
-      vec3 p0 = V0(p + dp) + dp;
+      vec3 p0 = V0(p + dp);
       vec3 v0 = V1(p + dp);
       vec3 m0 = V2(p + dp);
+      vec3 K = clamp(1.0 - 2.0*abs(p0), 0.00001, 1.0);
+      p0 += dp;
       vec3 dx = p0 - p1; vec3 dv = v0 - v1; float w = m0.x*GS(0.9*dx);
       vgrad += mat3(dv*dx.x,dv*dx.y,dv*dx.z)*w;
-      M += m0.x*w;
+      M += m0.x*w/(K.x*K.y*K.z);
       k1 += w;
     }
     M /= k1;
     vgrad /= k1;
 
     vec3 K0 = clamp(1.0 - 2.0*abs(p1), 0.001, 1.0);
-    float drho = m1.x/(K0.x*K0.y*K0.z) - rho;
+    float drho = m1.x - rho;
     vgrad -= 0.01*mat3(drho)*abs(drho);
 
     //integrate deformation gradient

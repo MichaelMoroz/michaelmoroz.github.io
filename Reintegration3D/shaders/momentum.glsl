@@ -41,6 +41,19 @@ vec4 border3d(vec3 p)
                    min3(vec4(-1.0, 0.0, 0.0, R3D.x - p.x), vec4(1.0, 0.0, 0.0, p.x))));
 }
 
+vec2 BI(vec3 rd)
+{
+    vec3 m = 1.0/rd;
+    vec3 k = abs(m)*vec3(0.5);
+    vec3 t1 = - k;
+    vec3 t2 = + k;
+
+    float tN = max( max( t1.x, t1.y ), t1.z );
+    float tF = min( min( t2.x, t2.y ), t2.z );
+	
+    return vec2( tN, tF );
+}
+
 void main () {
   vec3 p = D3(floor(vec2(R)*uv));
   vec3 p1 = V0(p);
@@ -59,17 +72,18 @@ void main () {
     vec3 m0 = V2(p + dp);
     mat3 stress0 = mat3(V3(p + dp), V4(p + dp), V5(p + dp));
     
-    vec3 dx = p0 - p1; vec3 dv = v0 - v1; float K = GS(dx);
-    F += m0.x*m1.x*(((m0.x*stress0 + m1.x*stress1)/(m0.x + m1.x))*dx + 0.2*dot(dx,dv)*dx)*K; 
+    vec3 dx = p0 - p1;
+    vec3 dx1 = dp; vec3 dv = v0 - v1; float K = GS(dx);
+    F += m0.x*m1.x*(((m0.x*stress0 + m1.x*stress1)/(m0.x + m1.x))*dx + 0.75*dot(dx,dv)*dx)*K; 
     a += K;
-    grad += (m0.z - m1.z)*dx*K;
+    grad += (m0.x - m1.x)*dx1*K;
   }
   F /= a;
   grad /= a;
   
   if(m1.x > 0.0)
   {
-    vec3 K0 = clamp(1.0 - 2.0*abs(p1), 0.001, 1.0);
+    vec3 K0 = clamp(1.0 - 2.0*abs(p1), 0.00001, 1.0);
     m1.y = m1.x/(K0.x*K0.y*K0.z);
     m1.z = length(F);
     //gravity
@@ -79,13 +93,13 @@ void main () {
     
     //border
     vec4 b = border3d(p1+p);
-    v1 += clamp(-dot(b.xyz,v1) + 0.01, 0., 1.)*b.xyz*smoothstep(3., 2., b.w);
+    v1 += clamp(-dot(b.xyz,v1) + 0.02, 0., 1.)*b.xyz*smoothstep(3.5, 1., b.w);
 
     //velocity limit
     float V = length(v1);
     v1 /= (V > 1.)?1.*V:1.;
   }
-  gl_FragData[0].xyz = p1;
+  gl_FragData[0].xyz = p1*0.9999;
   gl_FragData[1].xyz = v1;
   gl_FragData[2].xyz = m1;
   gl_FragData[3].xyz = grad;
