@@ -19,6 +19,8 @@ uniform float rho;
 uniform float elastic_lambda;
 uniform float elastic_mu;
 uniform float fluid_p;
+uniform float isosurface;
+uniform float smooth_radius;
 
 //coordinate mappings
 vec2 D2(vec3 p3d){return p3d.xy + vec2(mod(p3d.z, T.x), floor(p3d.z/T.x))*R3D.xy;}
@@ -89,11 +91,29 @@ mat3 strain(mat3 D)
     mat3 P = P_term_0 + P_term_1;
 
     // equation 38, MPM course
-    mat3 stress = (1./J) * P * F_T;
+    mat3 stress = P * F_T;
 
-    return volume * stress;
+    return stress;
 }
 
+float CellIntersection(vec3 rd)
+{
+    vec3 t1 = - abs(1.0/rd)*vec3(0.5);
+    return max( max( t1.x, t1.y ), t1.z );
+}
+
+vec3 getPlane(vec3 p0)
+{
+    vec3 N = -p0/(length(p0)+1e-4);
+    return 2.*p0 - N*CellIntersection(N);
+}
+
+
+float IsoEstimate(vec3 p0, float rho)
+{
+    float d = 2.0*length(p0) - CellIntersection(-p0/(length(p0)+1e-4));
+    return smoothstep(isosurface*0.7, isosurface*1.3, rho);
+}
 
 void main () {
   vec3 p = D3(floor(vec2(R)*uv));
@@ -105,37 +125,46 @@ void main () {
   //velocity gradient
   mat3 vgrad = mat3(0.);
   mat3 stress = mat3(0.);
+  vec3 grad = vec3(0.);
+ 
 
   if(m1.x > 0.0)
   {  
     float M = 0.;
-    float k1 = 0.01;
+    float k1 = 0.001, k2 = 0.001;
+    vec3 pl1 = getPlane(p1);
+
     range(i, -1, 1) range(j, -1, 1) range(k, -1, 1)
     {
       vec3 dp = vec3(i,j,k);
+      vec3 m0 = V2(p + dp);
+      if(m0.x <= 1e-6) continue;
       vec3 p0 = V0(p + dp);
       vec3 v0 = V1(p + dp);
-      vec3 m0 = V2(p + dp);
-      vec3 K = clamp(1.0 - 2.0*abs(p0), 0.00001, 1.0);
+      vec3 K = clamp(1.0 - 2.0*abs(p0), 0.01, 1.0);
       p0 += dp;
-      vec3 dx = p0 - p1; vec3 dv = v0 - v1; float w = m0.x*GS(0.9*dx);
-      vgrad += mat3(dv*dx.x,dv*dx.y,dv*dx.z)*w;
-      M += m0.x*w/(K.x*K.y*K.z);
-      k1 += w;
+      vec3 dx = p0 - p1; vec3 dv = v0 - v1; float w = GS(1.2*dx);
+      vgrad += mat3(dv*dx.x,dv*dx.y,dv*dx.z)*w*m0.x;
+      M += m0.x*m0.x*w;
+      k1 += m0.x*w;
     }
     M /= k1;
     vgrad /= k1;
+    grad /= k2;
 
-    vec3 K0 = clamp(1.0 - 2.0*abs(p1), 0.001, 1.0);
-    float drho = m1.x - rho;
-    vgrad -= 0.01*mat3(drho)*abs(drho);
+
+        
+    float drho = (M - rho);
+    vgrad -= 0.001*mat3(drho)*abs(drho);
 
     //integrate deformation gradient
-    dgrad1 += dt*vgrad*dgrad1;
+    dgrad1 += 1.0*dt*vgrad*dgrad1;
 
-    float r = 0.002;
-    //dgrad = dgrad*(1. - r) + mat2(1.)*r;
     
+    float r = 0.0001;
+    dgrad1 = dgrad1*(1. - r) + mat3(1.)*r;
+    
+
     if(solid)
     {
       //solid
@@ -147,6 +176,9 @@ void main () {
       stress = mat3(-fluid_p*(M - rho));
       dgrad1 = mat3(1.);
     }
+
+
+
   }
 
   if(iFrame < 5)
@@ -154,10 +186,10 @@ void main () {
     dgrad1 = mat3(1.); 
   }
 
-  gl_FragData[0].xyz = clamp(dgrad1[0], -5.0, 5.0);
-  gl_FragData[1].xyz = clamp(dgrad1[1], -5.0, 5.0);
-  gl_FragData[2].xyz = clamp(dgrad1[2], -5.0, 5.0);
-  gl_FragData[3].xyz = clamp(stress[0], -3.0, 3.0);
-  gl_FragData[4].xyz = clamp(stress[1], -3.0, 3.0);
-  gl_FragData[5].xyz = clamp(stress[2], -3.0, 3.0);
+  gl_FragData[0].xyz = clamp(dgrad1[0], -3.0, 3.0);
+  gl_FragData[1].xyz = clamp(dgrad1[1], -3.0, 3.0);
+  gl_FragData[2].xyz = clamp(dgrad1[2], -3.0, 3.0);
+  gl_FragData[3].xyz = clamp(stress[0], -4.0, 4.0);
+  gl_FragData[4].xyz = clamp(stress[1], -4.0, 4.0);
+  gl_FragData[5].xyz = clamp(stress[2], -4.0, 4.0);
 }

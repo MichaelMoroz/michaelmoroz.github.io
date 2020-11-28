@@ -44,10 +44,15 @@ var params = {
   PN: 1,
   rho: 0.75, rhorange: [0., 1.5],
   solid: true,
-  elastic_lambda: 15.0, elrange: [0., 60.],
-  elastic_mu: 25.0, emrange: [0., 60.],
-  fluid_p: 2.0, fprange: [0., 5.],
-  diffusion: 0.03, dirange: [0., 3.],
+  elastic_lambda: 5.0, elrange: [0., 60.],
+  elastic_mu: 50.0, emrange: [0., 120.],
+  fluid_p: 1.0, fprange: [0., 5.],
+  diffusion: 0.0, dirange: [0., 0.3],
+  isosurface: 0.25, isorange: [0., 1.],
+  dynamic_friction: 0.2, dfrange: [0.,3.],
+  gravityZ: 0.3, gZrange: [-1.0, 1.0],
+  gravityY: 0., gYrange: [-1.0, 1.0],
+  distortion: 4., drange: [0.0, 12.0],
   options: ['64x64x16','64x64x64','128x128x16','128x128x64','256x256x16','256x256x64', '256x256x256'], 
   selection : null 
 };
@@ -102,7 +107,8 @@ function Initialize()
       T: function(){return [sim_resolution[0]/sim_resolution3d[0], sim_resolution[1]/sim_resolution3d[1]]},
       dt: function() {return params.dt},
       rho: function() {return params.rho},
-      diffusion: function() {return params.diffusion}
+      diffusion: function() {return params.diffusion},
+      smooth_radius: function(){return params.smoothing}
     },
     depth: { enable: false },
     count: 3
@@ -129,7 +135,9 @@ function Initialize()
       solid: function() {return Boolean(params.solid)},
       elastic_lambda:  function() {return params.elastic_lambda},
       elastic_mu: function() {return params.elastic_mu},
-      fluid_p: function() {return params.fluid_p}
+      fluid_p: function() {return params.fluid_p},
+      isosurface: function(){return params.isosurface},
+      smooth_radius: function(){return params.smoothing}
     },
     depth: { enable: false },
     count: 3
@@ -147,11 +155,16 @@ function Initialize()
       iChannel3: regl.prop('ch3'),
       iChannel4: regl.prop('ch4'),
       iChannel5: regl.prop('ch5'),
+      iChannel6: regl.prop('ch6'),
       iFrame: function(){return frame},
       R: function(){return sim_resolution},
       R3D: function(){return sim_resolution3d},
       T: function(){return [sim_resolution[0]/sim_resolution3d[0], sim_resolution[1]/sim_resolution3d[1]]},
-      dt: function() {return params.dt}
+      dt: function() {return params.dt},
+      isosurface: function(){return params.isosurface},
+      dynamic_friction: function(){return params.dynamic_friction},
+      gravityY: function(){return params.gravityY},
+      gravityZ: function(){return params.gravityZ}
     },
     depth: { enable: false },
     count: 3
@@ -164,6 +177,7 @@ function Initialize()
       iChannel0: regl.prop('ch0'),
       iChannel1: regl.prop('ch1'),
       iChannel2: regl.prop('ch2'),
+      iChannel3: regl.prop('ch3'),
       iFrame: function(){return frame},
       scale: function(){return scale},
       iPos:  function(){return [DX,-DY]},
@@ -171,7 +185,9 @@ function Initialize()
       R: function(){return sim_resolution},
       R3D: function(){return sim_resolution3d},
       T: function(){return [sim_resolution[0]/sim_resolution3d[0], sim_resolution[1]/sim_resolution3d[1]]},
-      CamPos: function(){return CamPos}
+      CamPos: function(){return CamPos},
+      isosurface: function(){return params.isosurface},
+      distortion: function(){return params.distortion}
     },
     attributes: {position: [ -4, -4, 4, -4, 0, 4 ]},
     depth: { enable: false },
@@ -201,18 +217,19 @@ function InitializeFBOs()
   fbo1 = regl.framebuffer({
     color: [
       regl.texture({width: ww, height: hh, 
-        type: 'float16', format: 'rgb'}), //dgrad0
+        type: 'float32', format: 'rgb'}), //dgrad0
       regl.texture({width: ww, height: hh, 
-        type: 'float16', format: 'rgb'}), //dgrad1
+        type: 'float32', format: 'rgb'}), //dgrad1
       regl.texture({width: ww, height: hh, 
-        type: 'float16', format: 'rgb'}), //dgrad2
+        type: 'float32', format: 'rgb'}), //dgrad2
       regl.texture({width: ww, height: hh, 
-        type: 'float16', format: 'rgb'}), //stress0
+        type: 'float32', format: 'rgb'}), //stress0
       regl.texture({width: ww, height: hh, 
-        type: 'float16', format: 'rgb'}), //stress1
+        type: 'float32', format: 'rgb'}), //stress1
       regl.texture({width: ww, height: hh, 
-        type: 'float16', format: 'rgb'}) //stress2
-    ],
+        type: 'float32', format: 'rgb'}) //stress2
+    
+      ],
     depth: false});
   fbo2 = regl.framebuffer({
     color: [
@@ -223,7 +240,9 @@ function InitializeFBOs()
       regl.texture({width: ww, height: hh, 
         type: 'float32', format: 'rgb'}), //mass
       regl.texture({width: ww, height: hh, 
-        type: 'float32', format: 'rgb', mag: 'linear'}) //normals
+        type: 'float32', format: 'rgb', mag: 'linear'}),//isosurface gradients
+      regl.texture({width: ww, height: hh, 
+        type: 'float32', format: 'rgb', mag: 'linear'})//mass distribution
     ],
     depth: false});
 }
@@ -262,6 +281,11 @@ var controlKit = new ControlKit();
                   .addSlider(params, 'elastic_mu', 'emrange', {label: "Elastic Mu"})
                   .addSlider(params, 'fluid_p', 'fprange', {label: "Fluid Pressure"})
                   .addSlider(params, 'diffusion', 'dirange', {label: "Diffusion"})
+                  .addSlider(params, 'dynamic_friction', 'dfrange', {label: "Friction"})
+                  .addSlider(params, 'isosurface', 'isorange', {label: "Density Isosurface"})
+                  .addSlider(params, 'gravityY', 'gYrange', {label: "Gravity Y"})
+                  .addSlider(params, 'gravityZ', 'gZrange', {label: "Gravity Z"})
+                  .addSlider(params, 'distortion', 'drange', {label: "Map distortion"})
                   .addButton('Restart',function(){frame = 0})
                   //.addValuePlotter(params, 'frametime', {label: 'Frame time', height: 100})
 
@@ -297,9 +321,9 @@ regl.frame(() => {
                      ch3: fbo0.color[3], ch4: fbo0.color[4], ch5: fbo0.color[5]});
     MomentumUpdate({out: fbo2,
                     ch0: fbo0.color[0], ch1: fbo0.color[1], ch2: fbo0.color[2], 
-                    ch3: fbo1.color[3], ch4: fbo1.color[4], ch5: fbo1.color[5]});
+                    ch3: fbo1.color[3], ch4: fbo1.color[4], ch5: fbo1.color[5], ch6: fbo1.color[6]});
   }
-  Image({ch0: fbo2.color[0], ch1: fbo2.color[2], ch2: fbo2.color[3]});
+  Image({ch0: fbo2.color[0], ch1: fbo2.color[2], ch2: fbo2.color[3], ch3: fbo2.color[4]});
  
 
   if(mb.left)

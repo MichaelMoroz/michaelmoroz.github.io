@@ -12,7 +12,7 @@ uniform vec2 R;
 uniform float dt;
 uniform float diffusion;
 uniform float rho;
-
+uniform float smooth_radius;
 uniform vec3 R3D;
 uniform vec2 T;
 //coordinate mappings
@@ -53,16 +53,16 @@ void main () {
     mat3 dgrad0 = mat3(V3(p + dp), V4(p + dp), V5(p + dp));
     
     //dynamic distribution size
-    vec3 K = clamp(1.0 - 2.0*abs(p0), 0.00001, 1.0);
-    K += K*clamp(diffusion, 0., 0.1)*dt;
+    vec3 K = clamp(1.0 - 2.0*abs(p0), 0.01, 1.0);
+    K += K*clamp(diffusion, 0., 0.3)*dt;
     
     //update particle position in time and relative to cur cell
     p0 += dp + dt*v0;
 
     //box overlaps
-    vec3 aabb0 = clamp(p0 - K*0.5, vec3(-0.5), vec3(0.5)); 
-    vec3 aabb1 = clamp(p0 + K*0.5, vec3(-0.5), vec3(0.5)); 
-    vec3 size = aabb1 - aabb0; 
+    vec3 aabb0 = max(p0 - K*0.5, -0.5); 
+    vec3 aabb1 = min(p0 + K*0.5, 0.5); 
+    vec3 size = max(aabb1 - aabb0, 0.); 
     vec3 center = 0.5*(aabb0 + aabb1);
     
     //the deposited mass into this cell
@@ -87,19 +87,22 @@ void main () {
   else 
   {
     dgrad1 = mat3(1.);
+    v1 = vec3(0.);
+    p1 = vec3(0.);
   }
 
   if(iFrame < 5)
   {
-    m1 = rho*smoothstep(R3D.x*0.6, R3D.x*0.5, p.x)*(0.5 + 0.5*sin(p.x*0.3)*sin(p.y*0.3)*sin(p.z*0.3));
+    m1 = rho*smoothstep(R3D.x*0.3, R3D.x*0.2, p.x)*(0.5 + 0.5*sin(p.x*0.3)*sin(p.y*0.3)*sin(p.z*0.3));
     p1 = vec3(0);
     v1 = vec3(0); 
     dgrad1 = mat3(1.);
   }
+  vec3 K1 = clamp(1.0 - 2.0*abs(p1), 0.01, 1.0);
 
-  gl_FragData[0].xyz = p1;
+  gl_FragData[0].xyz = clamp(p1, -0.5, 0.5);
   gl_FragData[1].xyz = v1;
-  gl_FragData[2].xyz = vec3(m1,0.,mi);
+  gl_FragData[2].xyz = vec3(m1,m1/(K1.x*K1.y*K1.z),mi);
   gl_FragData[3].xyz = dgrad1[0];
   gl_FragData[4].xyz = dgrad1[1];
   gl_FragData[5].xyz = dgrad1[2];
