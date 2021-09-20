@@ -10,6 +10,6 @@ I'm interested in all kinds of real time simulations and rendering.
 
 [michael08840884@gmail.com](mailto:michael08840884@gmail.com)
 
-[LinkedIn](https://www.linkedin.com/in/moroz-mykhailo-86847a1b4)
+[LinkedIn](https://www.linkedin.com/in/mykhailo-moroz-86847a1b4/)
 
 Also check out my [shadertoy page](https://www.shadertoy.com/user/michael0884)!
