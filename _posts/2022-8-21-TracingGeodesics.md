@@ -86,7 +86,7 @@ You can find a derivation of those, for example, [here](https://mathworld.wolfra
 
 Then we take the derivative with respect to to the path parameter:
 
-\\[ \frac{d}{dt} 2 g_{i \nu} \frac{dx^\nu}{dt} =  2 \frac{d g_{i \nu} }{dt}  \frac{dx^\nu}{dt} + 2 g_{i \nu} \frac{d^2x^\nu}{dt^2} = 
+\\[ \frac{d}{dt} \left( 2 g_{i \nu} \frac{dx^\nu}{dt} \right) =  2 \frac{d g_{i \nu} }{dt}  \frac{dx^\nu}{dt} + 2 g_{i \nu} \frac{d^2x^\nu}{dt^2} = 
 2 \frac{d g_{i \nu} }{dx^\mu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} + 2 g_{i \nu} \frac{d^2x^\nu}{dt^2} \\]
 
 And lastly:
