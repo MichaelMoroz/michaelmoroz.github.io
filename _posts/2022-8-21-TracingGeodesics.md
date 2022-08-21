@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Visualizing General Relativity
-image: ReintegrationTracking.png
+image: SpaceEngineBH.jpg
 ---
 
 ### Contents
@@ -19,7 +19,7 @@ The main ingredient of any GR render is figuring out how the rays of light move 
 
 So how exactly do we trace rays in curves space? Any object inside a curved space follows something called a geodesic.
 
-A geodesic is essentially just a fancy word for path of shortest lengthbetween 2 points inside a space, and actually there could be multiple of such paths, which are locally minimal(in the sense that you cant nudge the path to make it shorter, globally there might be a shorter path). It should be noted, however, that in Minkovski space-time the definition is actually a bit more complicated, because of negative distances. But instead of paths between 2 points we're only interested in finding how a ray moves. So essentially we have a position in space and a direction of movement, and we would like to know how the direction of movement changes to minimize the lengthof the path the ray takes.
+A geodesic is essentially just a fancy word for path of shortest length between 2 points inside a space, and actually there could be multiple of such paths, which are locally minimal(in the sense that you cant nudge the path to make it shorter, globally there might be a shorter path). It should be noted, however, that in Minkovski space-time the definition is actually a bit more complicated, because of negative distances. But instead of paths between 2 points we're only interested in finding how a ray moves. So essentially we have a position in space and a direction of movement, and we would like to know how the direction of movement changes to minimize the lengthof the path the ray takes.
 
 *Here I'll try to very roughly explain the derivation, a more in-depth explanation would at least require a multi-part series of blog posts. And if you wish to skip over the math part, jump to the last part.*
 
@@ -49,7 +49,7 @@ For a flat space-time like space we actually get something similar but with the 
 
 Here I used the \\( (- + + +) \\) signature, but signs can actually be flipped without changing the geodesics, and in some cases, like for particle physics, it makes more sense to use the opposite \\( (+ - - -) \\) signature.
 
-Going back to the main question of computing distances, to compute the lengthbetween 2 points along some path we simply need to sum the infinitesimal distances together using an integral:
+Going back to the main question of computing distances, to compute the length between 2 points along some path we simply need to sum the infinitesimal distances together using an integral:
 
 \\[ l = \int_A^B \sqrt{g_{\mu \nu} dx^\mu dx^\nu} = \int_A^B \sqrt{g_{\mu \nu} dx^\mu dx^\nu} \frac{dt}{dt} = \int_A^B \sqrt{g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt}} dt\\] 
 
