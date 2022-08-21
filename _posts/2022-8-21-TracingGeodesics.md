@@ -37,7 +37,7 @@ In our case, where we describe vectors as a set of numbers, a metric is simply a
 
 Usually the sum is just implicitly assumed by [Einstein notation](https://en.wikipedia.org/wiki/Einstein_notation) [1].
 
-\\[ ds^2 = g_{\mu \nu} dx^i dx^j \\] 
+\\[ ds^2 = g_{\mu \nu} dx^\mu dx^\nu \\] 
 
 Here we can actually see that for some simple choices of \\( g_{\mu \nu} \\) we can get the distances by Pythagoras' theorem. Specifically for the case when the metric tensor matrix is a unit matrix.
 
@@ -111,7 +111,7 @@ So here comes the star of the show - Hamiltonian mechanics. Hamiltonian equation
 The derivation of Hamilton's equations of motion can be found [here](https://en.wikipedia.org/wiki/Hamiltonian_mechanics#Deriving_Hamilton's_equations).
 \\( p \\) is the so called generalized momentum, it's the derivative of the Lagrangian with respect to the coordinate parameter("time") derivative.
 
-\\[ p^i = \frac{\partial L}{\partial \frac{dx^i}{dt} } \\]
+\\[ p_i = \frac{\partial L}{\partial \frac{dx^i}{dt} } \\]
 
 And to get the Hamiltonian itself you need to apply the [Legendre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/) [5] on the Lagrangian:
 
@@ -119,21 +119,21 @@ And to get the Hamiltonian itself you need to apply the [Legendre Transform](htt
 
 And for our case the momentum would be, since we already computed this value when writing down the Euler-Lagrange equations:
 
-\\[ p^i = 2 g_{i j} \frac{dx^j}{dt} \\]
+\\[ p_i = 2 g_{i j} \frac{dx^j}{dt} \\]
 
 To get the "time" derivatives you simply need to multiply both sides by the metric tensor inverse:
 
-\\[ \frac{dx^i}{dt} = \frac{1}{2} g^{i j} p^j \\]
+\\[ \frac{dx^i}{dt} = \frac{1}{2} g^{i j} p_j \\]
 
 And the Hamiltonian itself:
 
-\\[ H = \sum_{i}^N \frac{dx^i}{dt} p^i - L =  2 g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} - g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} =  g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = L\\]
+\\[ H = \sum_{i}^N \frac{dx^i}{dt} p_i - L =  2 g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} - g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} =  g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = L\\]
 
 Turns out that for this simple choice of a geodesic Lagrangian, the Hamiltonian is equal to the Lagrangian!
 
 Also we want to know the Hamiltonian as a function of the generalized momentum by substituting equation (N):
 
-\\[ H = g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = g^{i j} p^i p^j \\]
+\\[ H = g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = g^{i j} p_i p_j \\]
 
 In fact this is all we need to write a numerical geodesic integrator! 
 
