@@ -101,7 +101,7 @@ Multiplying by the metric tensor inverse \\( - \frac{1}{2} g^{i \nu} \\) we get:
 
 \\[ \frac{d^2x^\nu}{dt^2} +  g^{i \nu} \left( \frac{d g_{i \nu} }{dx^\mu} - \frac{1}{2} \frac{d g_{\mu \nu} }{dx^i}  \right) \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} = 0 \\]
 
-And that's our system of equations for a geodesic, we could of course also substitute the Christoffel symbols here, but for our application there is no difference. Of course we could just use that for tracing geodesic rays and call it a day, but unfortunately this would require computing a whole lot of derivatives (in 4d space time its 64 of them to be specific), either manually, or by using numerical differentiation. Thankfully there is a way to avoid this, and in fact simplify the entire algorithm! (at a slight performance cost)
+And that's our system of equations for a geodesic, we could of course also substitute the Christoffel symbols here, but for our application there is no difference. Of course we could just use that for tracing geodesic rays and call it a day, but unfortunately this would require computing a whole lot of derivatives (in 4d space time it's 64 of them to be specific), either manually, or by using numerical differentiation. Thankfully there is a way to avoid this, and in fact simplify the entire algorithm! (at a slight performance cost)
 
 So here comes the star of the show - Hamiltonian mechanics. Hamiltonian equations of motion have a really nice form which allows to easily write a computer program that integrates them by using Euler integration.
 
@@ -109,7 +109,7 @@ So here comes the star of the show - Hamiltonian mechanics. Hamiltonian equation
 \\[ \frac{dx^i}{dt} =   \frac{\partial H}{\partial p^i} \\]
 
 The derivation of Hamilton's equations of motion can be found [here](https://en.wikipedia.org/wiki/Hamiltonian_mechanics#Deriving_Hamilton's_equations).
-\\( p \\) is the so called generalized momentum, its the derivative of the Lagrangian with respect to the coordinate parameter("time") derivative.
+\\( p \\) is the so called generalized momentum, it's the derivative of the Lagrangian with respect to the coordinate parameter("time") derivative.
 
 \\[ p^i = \frac{\partial L}{\frac{dx^i}{dt} } \\]
 
