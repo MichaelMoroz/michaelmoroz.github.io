@@ -4,23 +4,24 @@ title: Visualizing General Relativity
 image: SpaceEngineBH.jpg
 ---
 
+When dealing with renders of things like warp drives and black holes we usually just expect to see a simple approximation or an artist rendition, usually just assuming that the math required to pull off something accurate would require someone with at least a PhD in Mathematical Physics, which in most cases is somewhat true, but not necessarily. In this blog post I'll try to explain a way to do actually accurate visualizations within a 100 or so lines of code, for basically any kind of space time for which you can write its metric as code. The detailed mathematical derivation of this approach might be somewhat math heavy though.
+
+The main ingredient of any GR render is figuring out how the rays of light move around. Knowing how light moves we can trace rays from the camera into the scene as see where the light came from. So to render a basic scene without objects we simply trace a ray for each pixel and assignt the color of the pixel to the color of the skybox in the direction in which the ray ends up pointing to. 
+
 ### Contents
 * Introduction
 * What are geodesics?
 * Mathematical description of shortest path
 * Lagrangian mechanics description of shortest path
 * Hamiltonian mechanics and Legendre transform
-* Hamiltonian equations of motion for a geodesic
 * Writing this as code
 
-When dealing with renders of things like warp drives and black holes we usually just expect to see a simple approximation or an artist rendition, usually just assuming that the math required to pull off something accurate would require someone with at least a PhD in Mathematical Physics, which in most cases is somewhat true, but not necessarily. In this blog post I'll try to explain a way to do actually accurate visualizations within a 100 or so lines of code, for basically any kind of space time for which you can write its metric as code. The detailed mathematical derivation of this approach might be somewhat math heavy though.
-
-The main ingredient of any GR render is figuring out how the rays of light move around. Knowing how light moves we can trace rays from the camera into the scene as see where the light came from. So to render a basic scene without objects we simply trace a ray for each pixel and assignt the color of the pixel to the color of the skybox in the direction in which the ray ends up pointing to. 
-
+### What are geodesics?
 So how exactly do we trace rays in curves space? Any object inside a curved space follows something called a geodesic.
 
 A geodesic is essentially just a fancy word for path of shortest length between 2 points inside a space, and actually there could be multiple of such paths, which are locally minimal(in the sense that you cant nudge the path to make it shorter, globally there might be a shorter path). It should be noted, however, that in Minkovski space-time the definition is actually a bit more complicated, because of negative distances. But instead of paths between 2 points we're only interested in finding how a ray moves. So essentially we have a position in space and a direction of movement, and we would like to know how the direction of movement changes to minimize the lengthof the path the ray takes.
 
+### Mathematical description of shortest path
 *Here I'll try to very roughly explain the derivation, a more in-depth explanation would at least require a multi-part series of blog posts. And if you wish to skip over the math part, jump to the last part.*
 
 Mathematically speaking we have some coordinate system, a path, and a way to compute distances between 2 points. 
@@ -57,6 +58,7 @@ Where \\( \frac{dx^i}{dt} \\) is simply how fast the coordinate x changes with r
 
 Now our main question is how do we minimize the path length? Here is where we introduce a thing called calculus of variations, which is rouhtly speaking a way to find how a functional(distance) changes by varying its input function(path). Such derivatives has similar properties to normal function derivatives. And in fact, similarly to calculus, to find the extremum of a function(min, max or stationary point), we simply need to equate the variation to 0.
 
+### Lagrangian mechanics description of shortest path
 There is an entire branch of physics related to variational principles, and basically any kind of physical system has some kind of value it likes to minimize(or more generally make unchanging under small variations of path). That value is called action, and the function under the integral is called the Lagrangian function of the system. The branch of physics studying Lagrangians of systems is called Lagrangian mechanics. 
 
 In our case the Lagrangian can be written like this:
@@ -103,17 +105,18 @@ Multiplying by the metric tensor inverse \\( - \frac{1}{2} g^{i \nu} \\) we get:
 
 And that's our system of equations for a geodesic, we could of course also substitute the Christoffel symbols here, but for our application there is no difference. Of course we could just use that for tracing geodesic rays and call it a day, but unfortunately this would require computing a whole lot of derivatives (in 4d space time it's 64 of them to be specific), either manually, or by using numerical differentiation. Thankfully there is a way to avoid this, and in fact simplify the entire algorithm! (at a slight performance cost)
 
+### Hamiltonian mechanics and Legendre transform
 So here comes the star of the show - Hamiltonian mechanics. Hamiltonian equations of motion have a really nice form which allows to easily write a computer program that integrates them by using Euler integration.
 
 \\[ \frac{dp^i}{dt} = - \frac{\partial H}{\partial x^i} \\]
 \\[ \frac{dx^i}{dt} =   \frac{\partial H}{\partial p^i} \\]
 
-The derivation of Hamilton's equations of motion can be found [here](https://en.wikipedia.org/wiki/Hamiltonian_mechanics#Deriving_Hamilton's_equations).
+The derivation of Hamilton's equations of motion can be found [here](https://en.wikipedia.org/wiki/Hamiltonian_mechanics#Deriving_Hamilton's_equations) [5].
 \\( p \\) is the so called generalized momentum, it's the derivative of the Lagrangian with respect to the coordinate parameter("time") derivative.
 
 \\[ p_i = \frac{\partial L}{\partial \frac{dx^i}{dt} } \\]
 
-And to get the Hamiltonian itself you need to apply the [Legendre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/) [5] on the Lagrangian:
+And to get the Hamiltonian itself you need to apply the [Legendre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/) [6] on the Lagrangian:
 
 \\[ H = \sum_{i}^N p^i \frac{dx^i}{dt} - L \\]
 
@@ -133,9 +136,16 @@ Turns out that for this simple choice of a geodesic Lagrangian, the Hamiltonian 
 
 Also we want to know the Hamiltonian as a function of the generalized momentum by substituting equation (N):
 
-\\[ H = g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = g^{i j} p_i p_j \\]
+\\[ H = g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = \frac{1}{4} g^{i j} p_i p_j \\]
+
+While the equations of motion will simply be:
+
+\\[ \frac{dp^i}{dt} = - \frac{\partial H}{\partial x^i} \\]
+\\[ \frac{dx^i}{dt} = \frac{1}{2} g^{i j} p_j \\]
 
 In fact this is all we need to write a numerical geodesic integrator! 
+
+### Writing this as code
 
 
 ### References 
@@ -143,5 +153,6 @@ In fact this is all we need to write a numerical geodesic integrator!
 * [2] [Equivalence of squared Lagrangian to Lagrangian](https://physics.stackexchange.com/questions/149082/geodesic-equation-from-variation-is-the-squared-lagrangian-equivalent)
 * [3] [Euler-Lagrange equations](https://en.wikipedia.org/wiki/Euler%E2%80%93Lagrange_equation) 
 * [4] [Euler-Lagrange equations derivation](https://mathworld.wolfram.com/Euler-LagrangeDifferentialEquation.html)
-* [5] [Legendre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/)
-* [6] [Hamilltonian equations derivation](https://en.wikipedia.org/wiki/Hamiltonian_mechanics#Deriving_Hamilton's_equations)
+* [5] [Hamilltonian equations derivation](https://en.wikipedia.org/wiki/Hamiltonian_mechanics#Deriving_Hamilton's_equations)
+* [6] [Legendre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/)
+
