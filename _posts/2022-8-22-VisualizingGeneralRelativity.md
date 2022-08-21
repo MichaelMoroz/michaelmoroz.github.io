@@ -39,7 +39,7 @@ Usually the sum is just implicitly assumed by [Einstein notation](https://en.wik
 
 \\[ ds^2 = g_{\mu \nu} dx^i dx^j \\] 
 
-Here we can actually see that for some simple choices of \\( g_{\mu \nu} \\) we can get the distances by Pythagoras' theorem. Specifically for the case when the metric tensor matrix is a diagonal.
+Here we can actually see that for some simple choices of \\( g_{\mu \nu} \\) we can get the distances by Pythagoras' theorem. Specifically for the case when the metric tensor matrix is a unit matrix.
 
 \\[ ds^2 = dx_1^2 + dx_2^2 + dx_3^2 \\]
 
@@ -47,7 +47,7 @@ For a flat space-time like space we actually get something similar but with the 
 
 \\[ ds^2 = - dx_0^2 + dx_1^2 + dx_2^2 + dx_3^2 \\]
 
-Here I used the \\( (-+++) \\) signature, but signs can actually be flipped without changing the geodesics, and in some cases, like for particle physics, it makes more sense to use the opposite \\( (+- - -) \\) signature.
+Here I used the \\( (- + + +) \\) signature, but signs can actually be flipped without changing the geodesics, and in some cases, like for particle physics, it makes more sense to use the opposite \\( (+ - - -) \\) signature.
 
 Going back to the main question of computing distances, to compute the lenght between 2 points along some path we simply need to sum the infinitessimal distances together using an integral:
 
@@ -105,10 +105,37 @@ And thats our system of equations for a geodesic, we could of course also substi
 
 So here comes the star of the show - Hamiltonian mechanics. Hamiltonian equations of motion have a really nice form which allows to easily write a computer program that integrates them by using Euler integration.
 
-\\[ frac{dp}{dt} = - \frac{\partial H}{\partial q} \\]
-\\[ frac{dq}{dt} =   \frac{\partial H}{\partial p} \\]
+\\[ \frac{dp^i}{dt} = - \frac{\partial H}{\partial x^i} \\]
+\\[ \frac{dx^i}{dt} =   \frac{\partial H}{\partial p^i} \\]
 
-One gets Hamilton's equations of motion by using the [Legandre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/) [5] on the Hamiltonian.
+The derivation of Hamilton's equations of motion can be found [here](https://en.wikipedia.org/wiki/Hamiltonian_mechanics#Deriving_Hamilton's_equations).
+\\( p \\) is the so called generalized momentum, its the derivative of the Lagrangian with respect to the coordinate parameter("time") derivative.
+
+\\[ p^i = \frac{\partial L}{\frac{dx^i}{dt} } \\]
+
+And to get the Hamiltonian itself you need to apply the [Legandre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/) [5] on the Lagrangian:
+
+\\[ H = \sum_{i}^N p^i \frac{dx^i}{dt} - L \\]
+
+And for our case the momentum would be, since we already computed this value when writing down the Euler-Lagrange equations:
+
+\\[ p^i = 2 g_{i j} \frac{dx^j}{dt} \\]
+
+To get the "time" derivatives you simply need to multiply both sides by the metric tensor inverse:
+
+\\[ \frac{dx^i}{dt} = \frac{1}{2} g^{i j} p^j \\]
+
+And the Hamiltonian itself:
+
+\\[ H = \sum_{i}^N \frac{dx^i}{dt} p^i - L =  2 g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} - g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} =  g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = L\\]
+
+Turns out that for this simple choice of a geodesic Lagrangian, the Hamiltonian is equal to the Lagrangian!
+
+Also we want to know the Hamiltonian as a function of the generalized momentum by substituting equation (N):
+
+\\[ H = g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = g^{i j} p^i p^j \\]
+
+In fact this is all we need to write a numerical geodesic integrator! 
 
 
 ### References 
