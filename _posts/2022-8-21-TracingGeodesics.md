@@ -33,12 +33,12 @@ In physics, or more generally differential geometry, a metric is defined as an i
 
 In our case, where we describe vectors as a set of numbers, a metric is simply a matrix product of some matrix times the vectors
 
-\\[ ds^2 = \sum_{ij}^N g_{i,j} dx_i dx_j \\] 
+\\[ ds^2 = \sum_{ij}^N g_{ij} dx_i dx_j \\] 
 
 
 Length:
 
-\\[ l = \int_A^B \sqrt{\sum_{ij}^N g_{i,j} dx_i dx_j} dt \\] 
+\\[ l = \int_A^B \sqrt{g_{ij}(\bm{x}) dx_i dx_j} dt \\] 
 
 ...
 TODO
