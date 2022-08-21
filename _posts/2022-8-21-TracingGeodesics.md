@@ -87,7 +87,7 @@ You can find a derivation of those, for example, [here](https://mathworld.wolfra
 Then we take the derivative with respect to to the path parameter:
 
 \\[ \frac{d}{dt} 2 g_{i \nu} \frac{dx^\nu}{dt} =  2 \frac{d g_{i \nu} }{dt}  \frac{dx^\nu}{dt} + 2 g_{i \nu} \frac{d^2x^\nu}{dt^2} = 
-2 \frac{d g_{i \nu} }{dx^/mu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} + 2 g_{i \nu} \frac{d^2x^\nu}{dt^2} \\]
+2 \frac{d g_{i \nu} }{dx^\mu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} + 2 g_{i \nu} \frac{d^2x^\nu}{dt^2} \\]
 
 And lastly:
 
@@ -95,11 +95,11 @@ And lastly:
 
 Which leads us to the equation of motion:
 
-\\[ \frac{d g_{\mu \nu} }{dx^i} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} - 2 \frac{d g_{i \nu} }{dx^/mu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} -2 g_{i \nu} \frac{d^2x^\nu}{dt^2} = 0 \\]
+\\[ \frac{d g_{\mu \nu} }{dx^i} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} - 2 \frac{d g_{i \nu} }{dx^\mu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} -2 g_{i \nu} \frac{d^2x^\nu}{dt^2} = 0 \\]
 
 Multiplying by the metric tensor inverse \\( - \frac{1}{2} g^{i \nu} \\) we get:
 
-\\[ \frac{d^2x^\nu}{dt^2} +  g^{i \nu} (\frac{d g_{i \nu} }{dx^/mu} - \frac{1}{2} \frac{d g_{\mu \nu} }{dx^i}) \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} = 0 \\]
+\\[ \frac{d^2x^\nu}{dt^2} +  g^{i \nu} \left( \frac{d g_{i \nu} }{dx^\mu} - \frac{1}{2} \frac{d g_{\mu \nu} }{dx^i}  \right) \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} = 0 \\]
 
 And thats our system of equations for a geodesic, we could of course also substitute the Christoffel symbols here, but for our application there is no difference. Of course we could just use that for tracing geodesic rays and call it a day, but unfortunately this would require computing a whole lot of derivatives (in 4d space time its 64 of them to be specific), either manually, or by using numerical differentiation. Thankfully there is a way to avoid this, and in fact simplify the entire algorithm! (at a slight performance cost)
 
