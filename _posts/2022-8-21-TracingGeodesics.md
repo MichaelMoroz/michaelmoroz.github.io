@@ -38,7 +38,7 @@ In our case, where we describe vectors as a set of numbers, a metric is simply a
 
 Length:
 
-\\[ l = \int_A^B \sqrt{g_{ij}(\boldm{x}) dx_i dx_j} dt \\] 
+\\[ l = \int_A^B \sqrt{g_{ij} dx^i dx^j} dt \\] 
 
 ...
 TODO
