@@ -31,15 +31,15 @@ In physics, or more generally differential geometry, a metric is defined as an i
 
 \\[ ds^2 = g(dx, dx) \\] 
 
-In our case, where we describe vectors as a set of numbers, a metric is simply a matrix product of some matrix \\( g_{ij} \\) times the vectors. For our infinitessimal distance we get this expression:
+In our case, where we describe vectors as a set of numbers, a metric is simply a matrix product of some matrix \\( g_{\mu \nu} \\) times the vectors. For our infinitessimal distance \\( ds \\) we get this expression:
 
-\\[ ds^2 = \sum_{ij}^N g_{ij} dx_i dx_j \\] 
+\\[ ds^2 = \sum_{\mu \nu}^N g_{\mu \nu} dx_\mu dx_\nu \\] 
 
 Usually the sum is just implicitly assumed by [Einstein notation](https://en.wikipedia.org/wiki/Einstein_notation) [1].
 
-\\[ ds^2 = g_{ij} dx^i dx^j \\] 
+\\[ ds^2 = g_{\mu \nu} dx^i dx^j \\] 
 
-Here we can actually see that for some simple choices of \\( g_{ij} \\) we can get the distances by Pythagoras' theorem. Specifically for the case when the metric tensor matrix is a diagonal.
+Here we can actually see that for some simple choices of \\( g_{\mu \nu} \\) we can get the distances by Pythagoras' theorem. Specifically for the case when the metric tensor matrix is a diagonal.
 
 \\[ ds^2 = dx_1^2 + dx_2^2 + dx_3^2 \\]
 
@@ -51,7 +51,7 @@ Here I used the \\( (-+++) \\) signature, but signs can actually be flipped with
 
 Going back to the main question of computing distances, to compute the lenght between 2 points along some path we simply need to sum the infinitessimal distances together using an integral:
 
-\\[ l = \int_A^B \sqrt{g_{ij} dx^i dx^j} = \int_A^B \sqrt{g_{ij} dx^i dx^j} \frac{dt}{dt} = \int_A^B \sqrt{g_{ij} \frac{dx^i}{dt} \frac{dx^j}{dt}} dt\\] 
+\\[ l = \int_A^B \sqrt{g_{\mu \nu} dx^\mu dx^\nu} = \int_A^B \sqrt{g_{\mu \nu} dx^\mu dx^\nu} \frac{dt}{dt} = \int_A^B \sqrt{g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt}} dt\\] 
 
 Where \\( \frac{dx^i}{dt} \\) is simply how fast the coordinate x changes with respect to the path parameter ("clock"), in some sense can be interpreted as the velocity. 
 
@@ -61,25 +61,60 @@ There is an entire branch of physics related to variational principles, and basi
 
 In our case the Lagrangian can be written like this:
 
-\\[ L = \sqrt{g_{ij} \frac{dx^i}{dt} \frac{dx^j}{dt}} \\]
+\\[ L = \sqrt{g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt}} \\]
 
-Turns out we don't actually need the square root for the minimum of the functional to be a geodesic, we can simply use:
+Turns out we don't actually need the square root for the minimum of the functional to be a geodesic, we can simply use this as our geodesic Lagrangian:
 
-\\[ L = g_{ij} \frac{dx^i}{dt} \frac{dx^j}{dt} \\]
+\\[ L = g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} \\]
 
-The proof of this you can find [here](https://physics.stackexchange.com/questions/149082/geodesic-equation-from-variation-is-the-squared-lagrangian-equivalent). The only difference such simplification makes is that the parametrization of the path might be different, but the path itself will be the same.
+The proof of this you can find [here](https://physics.stackexchange.com/questions/149082/geodesic-equation-from-variation-is-the-squared-lagrangian-equivalent) [2]. The only difference such simplification makes is that the parametrization of the path might be different, but the path itself will be the same.
 
 So our goal right now is to minimize this functional:
 
-\\[ l = \int_A^B  g_{ij} \frac{dx^i}{dt} \frac{dx^j}{dt} dt \\] 
+\\[ S = \int_A^B  g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} dt \\] 
 
-...
-TODO
+In general the minimum of a functional like this can be found by applying the [Euler-Lagrange equations](https://en.wikipedia.org/wiki/Euler%E2%80%93Lagrange_equation) [3]:
 
+\\[ \frac{\partial L}{\partial x^i} - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx^i}{dt}} = 0 \\]
 
+You can find a derivation of those, for example, [here](https://mathworld.wolfram.com/Euler-LagrangeDifferentialEquation.html) [4]
 
+\\[ \frac{\partial L}{\partial \frac{dx^i}{dt}} = 
+    \frac{\partial  }{\partial \frac{dx^i}{dt}} g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} = 
+    g_{i \nu} \frac{dx^\nu}{dt} + g_{\mu i} \frac{dx^\mu}{dt} = 
+    2 g_{i \nu} \frac{dx^\nu}{dt} \\]
+
+Then we take the derivative with respect to to the path parameter:
+
+\\[ \frac{d}{dt} 2 g_{i \nu} \frac{dx^\nu}{dt} =  2 \frac{d g_{i \nu} }{dt}  \frac{dx^\nu}{dt} + 2 g_{i \nu} \frac{d^2x^\nu}{dt^2} = 
+2 \frac{d g_{i \nu} }{dx^/mu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} + 2 g_{i \nu} \frac{d^2x^\nu}{dt^2} \\]
+
+And lastly:
+
+\\[ \frac{\partial L}{\partial x^i} = \frac{d g_{\mu \nu} }{dx^i} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} \\]
+
+Which leads us to the equation of motion:
+
+\\[ \frac{d g_{\mu \nu} }{dx^i} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} - 2 \frac{d g_{i \nu} }{dx^/mu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} -2 g_{i \nu} \frac{d^2x^\nu}{dt^2} = 0 \\]
+
+Multiplying by the metric tensor inverse \\( - \frac{1}{2} g^{i \nu} \\) we get:
+
+\\[ \frac{d^2x^\nu}{dt^2} +  g^{i \nu} (\frac{d g_{i \nu} }{dx^/mu} - \frac{1}{2} \frac{d g_{\mu \nu} }{dx^i}) \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} = 0 \\]
+
+And thats our system of equations for a geodesic, we could of course also substitute the Christoffel symbols here, but for our application there is no difference. Of course we could just use that for tracing geodesic rays and call it a day, but unfortunately this would require computing a whole lot of derivatives (in 4d space time its 64 of them to be specific), either manually, or by using numerical differentiation. Thankfully there is a way to avoid this, and in fact simplify the entire algorithm! (at a slight performance cost)
+
+So here comes the star of the show - Hamiltonian mechanics. Hamiltonian equations of motion have a really nice form which allows to easily write a computer program that integrates them by using Euler integration.
+
+\\[ frac{dp}{dt} = - \frac{\partial H}{\partial q} \\]
+\\[ frac{dq}{dt} =   \frac{\partial H}{\partial p} \\]
+
+One gets Hamilton's equations of motion by using the [Legandre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/) [5] on the Hamiltonian.
 
 
 ### References 
 * [1] [Einstein notation](https://en.wikipedia.org/wiki/Einstein_notation)
-* [1] [Legandre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/)
+* [2] [Equivalence of squared Lagrangian to Lagrangian](https://physics.stackexchange.com/questions/149082/geodesic-equation-from-variation-is-the-squared-lagrangian-equivalent)
+* [3] [Euler-Lagrange equations](https://en.wikipedia.org/wiki/Euler%E2%80%93Lagrange_equation) 
+* [4] [Euler-Lagrange equations derivation](https://mathworld.wolfram.com/Euler-LagrangeDifferentialEquation.html)
+* [5] [Legandre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/)
+* [6] [Hamilltonian equations derivation](https://en.wikipedia.org/wiki/Hamiltonian_mechanics#Deriving_Hamilton's_equations)
