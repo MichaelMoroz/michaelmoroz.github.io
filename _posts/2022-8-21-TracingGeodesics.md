@@ -47,7 +47,7 @@ For a flat space-time like space we actually get something similar but with the 
 
 \\[ ds^2 = - dx_0^2 + dx_1^2 + dx_2^2 + dx_3^2 \\]
 
-Here I used the \\( (-+++) \\) signature, but signs can actually be flipped without changing the geodesics, and in some cases, like for particle physics, it makes more sense to use the opposite \\( (+---) \\) signature.
+Here I used the \\( (-+++) \\) signature, but signs can actually be flipped without changing the geodesics, and in some cases, like for particle physics, it makes more sense to use the opposite \\( (+- - -) \\) signature.
 
 Going back to the main question of computing distances, to compute the lenght between 2 points along some path we simply need to sum the infinitessimal distances together using an integral:
 
@@ -71,7 +71,7 @@ The proof of this you can find [here](https://physics.stackexchange.com/question
 
 So our goal right now is to minimize this functional:
 
-\\[ l = \int_A^B  g_{ij} \frac{dx^i}{dt} \frac{dx^j}{dt} \\] 
+\\[ l = \int_A^B  g_{ij} \frac{dx^i}{dt} \frac{dx^j}{dt} dt \\] 
 
 ...
 TODO
