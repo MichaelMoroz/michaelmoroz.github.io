@@ -9,7 +9,7 @@ image: ReintegrationTracking.png
 * What are geodesics?
 * Mathematical description of shortest path
 * Lagrangian mechanics description of shortest path
-* Hamiltonian mechanics and Legandre transform
+* Hamiltonian mechanics and Legendre transform
 * Hamiltonian equations of motion for a geodesic
 * Writing this as code
 
@@ -99,7 +99,7 @@ Which leads us to the equation of motion:
 
 Multiplying by the metric tensor inverse \\( - \frac{1}{2} g^{i \nu} \\) we get:
 
-\\[ \frac{d^2x^\nu}{dt^2} +  g^{i \nu} \left( \frac{d g_{i \nu} }{dx^\mu} - \frac{1}{2} \frac{d g_{\mu \nu} }{dx^i}  \right) \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} = 0 \\]
+\\[ \frac{d^2x^i}{dt^2} +  g^{i \nu} \left( \frac{d g_{i \nu} }{dx^\mu} - \frac{1}{2} \frac{d g_{\mu \nu} }{dx^i}  \right) \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} = 0 \\]
 
 And that's our system of equations for a geodesic, we could of course also substitute the Christoffel symbols here, but for our application there is no difference. Of course we could just use that for tracing geodesic rays and call it a day, but unfortunately this would require computing a whole lot of derivatives (in 4d space time it's 64 of them to be specific), either manually, or by using numerical differentiation. Thankfully there is a way to avoid this, and in fact simplify the entire algorithm! (at a slight performance cost)
 
@@ -111,9 +111,9 @@ So here comes the star of the show - Hamiltonian mechanics. Hamiltonian equation
 The derivation of Hamilton's equations of motion can be found [here](https://en.wikipedia.org/wiki/Hamiltonian_mechanics#Deriving_Hamilton's_equations).
 \\( p \\) is the so called generalized momentum, it's the derivative of the Lagrangian with respect to the coordinate parameter("time") derivative.
 
-\\[ p^i = \frac{\partial L}{\frac{dx^i}{dt} } \\]
+\\[ p^i = \frac{\partial L}{\partial \frac{dx^i}{dt} } \\]
 
-And to get the Hamiltonian itself you need to apply the [Legandre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/) [5] on the Lagrangian:
+And to get the Hamiltonian itself you need to apply the [Legendre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/) [5] on the Lagrangian:
 
 \\[ H = \sum_{i}^N p^i \frac{dx^i}{dt} - L \\]
 
@@ -143,5 +143,5 @@ In fact this is all we need to write a numerical geodesic integrator!
 * [2] [Equivalence of squared Lagrangian to Lagrangian](https://physics.stackexchange.com/questions/149082/geodesic-equation-from-variation-is-the-squared-lagrangian-equivalent)
 * [3] [Euler-Lagrange equations](https://en.wikipedia.org/wiki/Euler%E2%80%93Lagrange_equation) 
 * [4] [Euler-Lagrange equations derivation](https://mathworld.wolfram.com/Euler-LagrangeDifferentialEquation.html)
-* [5] [Legandre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/)
+* [5] [Legendre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/)
 * [6] [Hamilltonian equations derivation](https://en.wikipedia.org/wiki/Hamiltonian_mechanics#Deriving_Hamilton's_equations)
