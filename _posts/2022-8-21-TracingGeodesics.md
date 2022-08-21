@@ -47,9 +47,9 @@ For a flat space-time like space we actually get something similar but with the 
 
 \\[ ds^2 = - dx_0^2 + dx_1^2 + dx_2^2 + dx_3^2 \\]
 
-Here I used the (-+++) signature, but signs can actually be flipped without changing the geodesics, and in some cases, like for particle physics, it makes more sense to use the opposite (+---) signature.
+Here I used the \\( (-+++) \\) signature, but signs can actually be flipped without changing the geodesics, and in some cases, like for particle physics, it makes more sense to use the opposite \\( (+---) \\) signature.
 
-Lets go back to the main question of computing distances, to get the lenght between 2 points along some path we simply need to sum the infinitessimal distances together using an integral:
+Going back to the main question of computing distances, to compute the lenght between 2 points along some path we simply need to sum the infinitessimal distances together using an integral:
 
 \\[ l = \int_A^B \sqrt{g_{ij} dx^i dx^j} = \int_A^B \sqrt{g_{ij} dx^i dx^j} \frac{dt}{dt} = \int_A^B \sqrt{g_{ij} \frac{dx^i}{dt} \frac{dx^j}{dt}} dt\\] 
 
@@ -59,9 +59,19 @@ Now our main question is how do we minimize the path length? Here is where we in
 
 There is an entire branch of physics related to variational principles, and basically any kind of physical system has some kind of value it likes to minimize(or more generally make unchanging under small variations of path). That value is called action, and the function under the integral is called the Lagrangian function of the system. The branch of physics studying Lagrangians of systems is called Lagrangian mechanics. 
 
+In our case the Lagrangian can be written like this:
 
+\\[ L = \sqrt{g_{ij} \frac{dx^i}{dt} \frac{dx^j}{dt}} \\]
 
+Turns out we don't actually need the square root for the minimum of the functional to be a geodesic, we can simply use:
 
+\\[ L = g_{ij} \frac{dx^i}{dt} \frac{dx^j}{dt} \\]
+
+The proof of this you can find [here](https://physics.stackexchange.com/questions/149082/geodesic-equation-from-variation-is-the-squared-lagrangian-equivalent). The only difference such simplification makes is that the parametrization of the path might be different.
+
+So our goal right now is to minimize this functional:
+
+\\[ l = \int_A^B  g_{ij} \frac{dx^i}{dt} \frac{dx^j}{dt} \\] 
 
 ...
 TODO
@@ -71,5 +81,5 @@ TODO
 
 
 ### References 
-[1] [Einstein notation](https://en.wikipedia.org/wiki/Einstein_notation)
-[1] [Legandre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/)
+* [1] [Einstein notation](https://en.wikipedia.org/wiki/Einstein_notation)
+* [1] [Legandre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/)
