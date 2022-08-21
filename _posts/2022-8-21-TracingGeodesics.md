@@ -67,7 +67,7 @@ Turns out we don't actually need the square root for the minimum of the function
 
 \\[ L = g_{ij} \frac{dx^i}{dt} \frac{dx^j}{dt} \\]
 
-The proof of this you can find [here](https://physics.stackexchange.com/questions/149082/geodesic-equation-from-variation-is-the-squared-lagrangian-equivalent). The only difference such simplification makes is that the parametrization of the path might be different.
+The proof of this you can find [here](https://physics.stackexchange.com/questions/149082/geodesic-equation-from-variation-is-the-squared-lagrangian-equivalent). The only difference such simplification makes is that the parametrization of the path might be different, but the path itself will be the same.
 
 So our goal right now is to minimize this functional:
 
