@@ -181,7 +181,7 @@ And the Hamiltonian itself:
 
 Turns out that for this simple choice of a geodesic Lagrangian, the Hamiltonian is equal to the Lagrangian!
 
-Also we want to know the Hamiltonian as a function of the generalized momentum by substituting from equation (20):
+Also we want to know the Hamiltonian as a function of the generalized momentum by substituting from equation (21):
 
 \begin{equation}
  H = g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = \frac{1}{4} g^{i j} p_i p_j 
@@ -192,6 +192,7 @@ While the equations of motion will simply be:
 \begin{equation}
  \frac{dp_i}{dt} = - \frac{\partial H}{\partial x^i} 
 \end{equation}
+
 \begin{equation}
  \frac{dx^i}{dt} = \frac{1}{2} g^{i j} p_j 
 \end{equation}
