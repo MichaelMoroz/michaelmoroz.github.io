@@ -23,6 +23,8 @@ So how exactly do we trace rays in curves space? Any object inside a curved spac
 
 A geodesic is essentially just a fancy word for path of shortest length between 2 points inside a space, and actually there could be multiple of such paths, which are locally minimal(in the sense that you cant nudge the path to make it shorter, globally there might be a shorter path). It should be noted, however, that in Minkowski space-time the definition is actually a bit more complicated, because of negative distances. But instead of paths between 2 points we're only interested in finding how a ray moves. So essentially we have a position in space and a direction of movement, and we would like to know how the direction of movement changes to minimize the lengthof the path the ray takes.
 
+---
+
 ### Mathematical description of shortest path
 *Here I'll try to very roughly explain the derivation, a more in-depth explanation would at least require a multi-part series of blog posts. And if you wish to skip over the math part, jump to the last part.*
 
@@ -104,6 +106,8 @@ In general the minimum of a functional like this can be found by applying the [E
 
 You can find a derivation of those, for example, [here](https://mathworld.wolfram.com/Euler-LagrangeDifferentialEquation.html) [4]
 
+---
+
 <details>
   <summary>Euler-Lagrange equations derivation</summary>
 
@@ -112,6 +116,8 @@ You can find a derivation of those, for example, [here](https://mathworld.wolfra
 \end{equation}
 
 </details>
+
+---
 
 \begin{equation}
  \frac{\partial L}{\partial \frac{dx^i}{dt}} = 
@@ -210,6 +216,8 @@ While the equations of motion will simply be:
 \end{equation}
 
 In fact this is all we need to write a numerical geodesic integrator! 
+
+---
 
 ### Writing this as code
 
