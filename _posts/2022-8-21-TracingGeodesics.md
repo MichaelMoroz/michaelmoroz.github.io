@@ -32,7 +32,7 @@ A coordinate system being a set of several numbers labeling each point in the sp
 
 In physics, or more generally differential geometry, a metric is defined as an integral("sum") of something called the metric tensor. A metric tensor is a bilinear form \\( g(a, b) \\), it essentially maps pairs of vectors to real numbers, and is a generalization of dot product for curved spaces. So using a metric tensor we can find the length of a vector in space, and distances \\( ds \\) between infinitely close points in space.
 
-\\[ ds^2 = g(dx, dx) \\] 
+\\[ \begin{equation} ds^2 = g(dx, dx)  \end{equation} \\] 
 
 In our case, where we describe vectors as a set of numbers, a metric is simply a matrix product of some matrix \\( g_{\mu \nu} \\) times the vectors. For our infinitesimal distance \\( ds \\) we get this expression:
 
@@ -122,7 +122,7 @@ And to get the Hamiltonian itself you need to apply the [Legendre Transform](htt
 
 \\[ H = \sum_{i}^N p^i \frac{dx^i}{dt} - L \\]
 
-And for our case the momentum would be, since we already computed this value when writing down the Euler-Lagrange equations:
+And for our case the momentum would be the following, which we already computed when writing down the Euler-Lagrange equations:
 
 \\[ p_i = 2 g_{i j} \frac{dx^j}{dt} \\]
 
