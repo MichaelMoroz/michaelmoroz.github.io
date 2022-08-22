@@ -4,12 +4,6 @@ title: Visualizing General Relativity
 image: SpaceEngineBH.jpg
 ---
 
-### Introduction
-
-When dealing with renders of things like warp drives and black holes we usually just expect to see a simple approximation or an artist rendition, usually just assuming that the math required to pull off something accurate would require someone with at least a PhD in Mathematical Physics, which in most cases is somewhat true, but not necessarily. In this blog post I'll try to explain a way to do actually accurate visualizations within a 100 or so lines of code, for basically any kind of space time for which you can write its metric as code. The detailed mathematical derivation of this approach might be somewhat math heavy though.
-
-The main ingredient of any GR render is figuring out how the rays of light move around. Knowing how light moves we can trace rays from the camera into the scene as see where the light came from. So to render a basic scene without objects we simply trace a ray for each pixel and assignt the color of the pixel to the color of the skybox in the direction in which the ray ends up pointing to. 
-
 - [Introduction](#introduction)
 - [What are geodesics?](#what-are-geodesics)
 - [Mathematical description of shortest path](#mathematical-description-of-shortest-path)
@@ -17,6 +11,14 @@ The main ingredient of any GR render is figuring out how the rays of light move 
 - [Hamiltonian mechanics and Legendre transform](#hamiltonian-mechanics-and-legendre-transform)
 - [Writing this as code](#writing-this-as-code)
 - [References](#references)
+
+### Introduction
+
+When dealing with renders of things like warp drives and black holes we usually just expect to see a simple approximation or an artist rendition, usually just assuming that the math required to pull off something accurate would require someone with at least a PhD in Mathematical Physics, which in most cases is somewhat true, but not necessarily. In this blog post I'll try to explain a way to do actually accurate visualizations within a 100 or so lines of code, for basically any kind of space time for which you can write its metric as code. The detailed mathematical derivation of this approach might be somewhat math heavy though.
+
+The main ingredient of any GR render is figuring out how the rays of light move around. Knowing how light moves we can trace rays from the camera into the scene as see where the light came from. So to render a basic scene without objects we simply trace a ray for each pixel and assignt the color of the pixel to the color of the skybox in the direction in which the ray ends up pointing to. 
+
+---
 
 ### What are geodesics?
 So how exactly do we trace rays in curves space? Any object inside a curved space follows something called a geodesic.
@@ -73,6 +75,8 @@ Going back to the main question of computing distances, to compute the length be
 Where \\( \frac{dx^i}{dt} \\) is simply how fast the coordinate x changes with respect to the path parameter ("clock"), in some sense can be interpreted as the velocity. 
 
 Now our main question is how do we minimize the path length? Here is where we introduce a thing called calculus of variations, which is rouhtly speaking a way to find how a functional(distance) changes by varying its input function(path). Such derivatives has similar properties to normal function derivatives. And in fact, similarly to calculus, to find the extremum of a function(min, max or stationary point), we simply need to equate the variation to 0.
+
+---
 
 ### Lagrangian mechanics description of shortest path
 There is an entire branch of physics related to variational principles, and basically any kind of physical system has some kind of value it likes to minimize(or more generally make unchanging under small variations of path). That value is called action, and the function under the integral is called the Lagrangian function of the system. The branch of physics studying Lagrangians of systems is called Lagrangian mechanics. 
@@ -154,6 +158,8 @@ Multiplying by the metric tensor inverse \\( - \frac{1}{2} g^{i \nu} \\) we get:
 \end{equation}
 
 And that's our final system of equations for a geodesic, we could of course also substitute the Christoffel symbols here, but for our application there is no difference. Of course we could just use these equations for tracing geodesic rays and call it a day, but unfortunately this would require computing a whole lot of derivatives (in 4d space time it's 64 of them to be specific), either manually, or by using numerical differentiation. Thankfully there is a way to avoid this, and in fact simplify the entire algorithm! (at a slight performance cost)
+
+---
 
 ### Hamiltonian mechanics and Legendre transform
 So here comes the star of the show - Hamiltonian mechanics. Hamiltonian equations of motion have a really nice form which allows to easily write a computer program that integrates them by using Euler integration.
