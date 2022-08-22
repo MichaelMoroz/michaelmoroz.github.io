@@ -7,8 +7,8 @@ image: SpaceEngineBH.jpg
 - [Introduction](#introduction)
 - [What are geodesics?](#what-are-geodesics)
 - [Mathematical description of shortest path](#mathematical-description-of-shortest-path)
-- [Lagrangian mechanics description of shortest path](#lagrangian-mechanics-description-of-shortest-path)
-- [Hamiltonian mechanics and Legendre transform](#hamiltonian-mechanics-and-legendre-transform)
+- [Lagrangian description of a geodesic](#lagrangian-description-of-a-geodesic)
+- [Hamiltonian description of a geodesic](#hamiltonian-description-of-a-geodesic)
 - [Writing this as code](#writing-this-as-code)
 - [References](#references)
 
@@ -80,7 +80,7 @@ Now our main question is how do we minimize the path length? Here is where we in
 
 ---
 
-### Lagrangian mechanics description of shortest path
+### Lagrangian description of a geodesic
 There is an entire branch of physics related to variational principles, and basically any kind of physical system has some kind of value it likes to minimize(or more generally make unchanging under small variations of path). That value is called action, and the function under the integral is called the Lagrangian function of the system. The branch of physics studying Lagrangians of systems is called Lagrangian mechanics. 
 
 In our case the Lagrangian can be written like this:
@@ -163,7 +163,7 @@ And that's our final system of equations for a geodesic, we could of course also
 
 ---
 
-### Hamiltonian mechanics and Legendre transform
+### Hamiltonian description of a geodesic
 So here comes the star of the show - Hamiltonian mechanics. Hamiltonian equations of motion have a really nice form which allows to easily write a computer program that integrates them by using Euler integration.
 
 \begin{equation}
