@@ -44,21 +44,29 @@ In our case, where we describe vectors as a set of numbers, a metric is simply a
 
 Usually the sum is just implicitly assumed by [Einstein notation](https://en.wikipedia.org/wiki/Einstein_notation) [1].
 
-\\[ ds^2 = g_{\mu \nu} dx^\mu dx^\nu \\] 
+\begin{equation}
+ ds^2 = g_{\mu \nu} dx^\mu dx^\nu 
+\end{equation} 
 
 Here we can actually see that for some simple choices of \\( g_{\mu \nu} \\) we can get the distances by Pythagoras' theorem. Specifically for the case when the metric tensor matrix is a unit matrix.
 
-\\[ ds^2 = dx_1^2 + dx_2^2 + dx_3^2 \\]
+\begin{equation}
+ ds^2 = dx_1^2 + dx_2^2 + dx_3^2 
+\end{equation}
 
 For a flat space-time like space we actually get something similar but with the exception that the time coordinate component is with a negative sign.
 
-\\[ ds^2 = - dx_0^2 + dx_1^2 + dx_2^2 + dx_3^2 \\]
+\begin{equation}
+ ds^2 = - dx_0^2 + dx_1^2 + dx_2^2 + dx_3^2 
+\end{equation}
 
 Here I used the \\( (- + + +) \\) signature, but signs can actually be flipped without changing the geodesics, and in some cases, like for particle physics, it makes more sense to use the opposite \\( (+ - - -) \\) signature.
 
 Going back to the main question of computing distances, to compute the length between 2 points along some path we simply need to sum the infinitesimal distances together using an integral:
 
-\\[ l = \int_A^B \sqrt{g_{\mu \nu} dx^\mu dx^\nu} = \int_A^B \sqrt{g_{\mu \nu} dx^\mu dx^\nu} \frac{dt}{dt} = \int_A^B \sqrt{g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt}} dt\\] 
+\begin{equation}
+ l = \int_A^B \sqrt{g_{\mu \nu} dx^\mu dx^\nu} = \int_A^B \sqrt{g_{\mu \nu} dx^\mu dx^\nu} \frac{dt}{dt} = \int_A^B \sqrt{g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt}} dt
+\end{equation} 
 
 Where \\( \frac{dx^i}{dt} \\) is simply how fast the coordinate x changes with respect to the path parameter ("clock"), in some sense can be interpreted as the velocity. 
 
@@ -69,85 +77,123 @@ There is an entire branch of physics related to variational principles, and basi
 
 In our case the Lagrangian can be written like this:
 
-\\[ L = \sqrt{g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt}} \\]
+\begin{equation}
+ L = \sqrt{g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt}} 
+\end{equation}
 
 Turns out we don't actually need the square root for the minimum of the functional to be a geodesic, we can simply use this as our geodesic Lagrangian:
 
-\\[ L = g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} \\]
+\begin{equation}
+ L = g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} 
+\end{equation}
 
 The proof of this you can find [here](https://physics.stackexchange.com/questions/149082/geodesic-equation-from-variation-is-the-squared-lagrangian-equivalent) [2]. The only difference such simplification makes is that the parametrization of the path might be different, but the path itself will be the same.
 
 So our goal right now is to minimize this functional:
 
-\\[ S = \int_A^B  g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} dt \\] 
+\begin{equation}
+ S = \int_A^B  g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} dt 
+\end{equation} 
 
 In general the minimum of a functional like this can be found by applying the [Euler-Lagrange equations](https://en.wikipedia.org/wiki/Euler%E2%80%93Lagrange_equation) [3]:
 
-\\[ \frac{\partial L}{\partial x^i} - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx^i}{dt}} = 0 \\]
+\begin{equation}
+ \frac{\partial L}{\partial x^i} - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx^i}{dt}} = 0 
+\end{equation}
 
 You can find a derivation of those, for example, [here](https://mathworld.wolfram.com/Euler-LagrangeDifferentialEquation.html) [4]
 
-\\[ \frac{\partial L}{\partial \frac{dx^i}{dt}} = 
+\begin{equation}
+ \frac{\partial L}{\partial \frac{dx^i}{dt}} = 
     \frac{\partial  }{\partial \frac{dx^i}{dt}} g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} = 
     g_{i \nu} \frac{dx^\nu}{dt} + g_{\mu i} \frac{dx^\mu}{dt} = 
-    2 g_{i \nu} \frac{dx^\nu}{dt} \\]
+    2 g_{i \nu} \frac{dx^\nu}{dt} 
+\end{equation}
 
 Then we take the derivative with respect to to the path parameter:
 
-\\[ \frac{d}{dt} \left( 2 g_{i \nu} \frac{dx^\nu}{dt} \right) =  2 \frac{d g_{i \nu} }{dt}  \frac{dx^\nu}{dt} + 2 g_{i \nu} \frac{d^2x^\nu}{dt^2} = 
-2 \frac{d g_{i \nu} }{dx^\mu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} + 2 g_{i \nu} \frac{d^2x^\nu}{dt^2} \\]
+\begin{equation}
+ \frac{d}{dt} \left( 2 g_{i \nu} \frac{dx^\nu}{dt} \right) =  2 \frac{d g_{i \nu} }{dt}  \frac{dx^\nu}{dt} + 2 g_{i \nu} \frac{d^2x^\nu}{dt^2} = 
+2 \frac{d g_{i \nu} }{dx^\mu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} + 2 g_{i \nu} \frac{d^2x^\nu}{dt^2} 
+\end{equation}
 
 And lastly:
 
-\\[ \frac{\partial L}{\partial x^i} = \frac{d g_{\mu \nu} }{dx^i} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} \\]
+\begin{equation}
+ \frac{\partial L}{\partial x^i} = \frac{d g_{\mu \nu} }{dx^i} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} 
+\end{equation}
 
 Which leads us to the equation of motion:
 
-\\[ \frac{d g_{\mu \nu} }{dx^i} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} - 2 \frac{d g_{i \nu} }{dx^\mu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} -2 g_{i \nu} \frac{d^2x^\nu}{dt^2} = 0 \\]
+\begin{equation}
+ \frac{d g_{\mu \nu} }{dx^i} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} - 2 \frac{d g_{i \nu} }{dx^\mu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} -2 g_{i \nu} \frac{d^2x^\nu}{dt^2} = 0 
+\end{equation}
 
 Multiplying by the metric tensor inverse \\( - \frac{1}{2} g^{i \nu} \\) we get:
 
-\\[ \frac{d^2x^i}{dt^2} +  g^{i \nu} \left( \frac{d g_{i \nu} }{dx^\mu} - \frac{1}{2} \frac{d g_{\mu \nu} }{dx^i}  \right) \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} = 0 \\]
+\begin{equation}
+ \frac{d^2x^i}{dt^2} +  g^{i \nu} \left( \frac{d g_{i \nu} }{dx^\mu} - \frac{1}{2} \frac{d g_{\mu \nu} }{dx^i}  \right) \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} = 0 
+\end{equation}
 
 And that's our system of equations for a geodesic, we could of course also substitute the Christoffel symbols here, but for our application there is no difference. Of course we could just use that for tracing geodesic rays and call it a day, but unfortunately this would require computing a whole lot of derivatives (in 4d space time it's 64 of them to be specific), either manually, or by using numerical differentiation. Thankfully there is a way to avoid this, and in fact simplify the entire algorithm! (at a slight performance cost)
 
 ### Hamiltonian mechanics and Legendre transform
 So here comes the star of the show - Hamiltonian mechanics. Hamiltonian equations of motion have a really nice form which allows to easily write a computer program that integrates them by using Euler integration.
 
-\\[ \frac{dp^i}{dt} = - \frac{\partial H}{\partial x^i} \\]
-\\[ \frac{dx^i}{dt} =   \frac{\partial H}{\partial p^i} \\]
+\begin{equation}
+ \frac{dp^i}{dt} = - \frac{\partial H}{\partial x^i} 
+\end{equation}
+\begin{equation}
+ \frac{dx^i}{dt} =   \frac{\partial H}{\partial p^i} 
+\end{equation}
 
 The derivation of Hamilton's equations of motion can be found [here](https://en.wikipedia.org/wiki/Hamiltonian_mechanics#Deriving_Hamilton's_equations) [5].
 \\( p \\) is the so called generalized momentum, it's the derivative of the Lagrangian with respect to the coordinate parameter("time") derivative.
 
-\\[ p_i = \frac{\partial L}{\partial \frac{dx^i}{dt} } \\]
+\begin{equation}
+ p_i = \frac{\partial L}{\partial \frac{dx^i}{dt} } 
+\end{equation}
 
 And to get the Hamiltonian itself you need to apply the [Legendre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/) [6] on the Lagrangian:
 
-\\[ H = \sum_{i}^N p^i \frac{dx^i}{dt} - L \\]
+\begin{equation}
+ H = \sum_{i}^N p^i \frac{dx^i}{dt} - L 
+\end{equation}
 
 And for our case the momentum would be the following, which we already computed when writing down the Euler-Lagrange equations:
 
-\\[ p_i = 2 g_{i j} \frac{dx^j}{dt} \\]
+\begin{equation}
+ p_i = 2 g_{i j} \frac{dx^j}{dt} 
+\end{equation}
 
 To get the "time" derivatives you simply need to multiply both sides by the metric tensor inverse:
 
-\\[ \frac{dx^i}{dt} = \frac{1}{2} g^{i j} p_j \\]
+\begin{equation}
+ \frac{dx^i}{dt} = \frac{1}{2} g^{i j} p_j 
+\end{equation}
 
 And the Hamiltonian itself:
 
-\\[ H = \sum_{i}^N \frac{dx^i}{dt} p_i - L =  2 g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} - g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} =  g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = L\\]
+\begin{equation}
+ H = \sum_{i}^N \frac{dx^i}{dt} p_i - L =  2 g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} - g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} =  g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = L
+\end{equation}
 
 Turns out that for this simple choice of a geodesic Lagrangian, the Hamiltonian is equal to the Lagrangian!
 
 Also we want to know the Hamiltonian as a function of the generalized momentum by substituting equation (N):
 
-\\[ H = g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = \frac{1}{4} g^{i j} p_i p_j \\]
+\begin{equation}
+ H = g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = \frac{1}{4} g^{i j} p_i p_j 
+\end{equation}
 
 While the equations of motion will simply be:
 
-\\[ \frac{dp_i}{dt} = - \frac{\partial H}{\partial x^i} \\]
-\\[ \frac{dx^i}{dt} = \frac{1}{2} g^{i j} p_j \\]
+\begin{equation}
+ \frac{dp_i}{dt} = - \frac{\partial H}{\partial x^i} 
+\end{equation}
+\begin{equation}
+ \frac{dx^i}{dt} = \frac{1}{2} g^{i j} p_j 
+\end{equation}
 
 In fact this is all we need to write a numerical geodesic integrator! 
 
