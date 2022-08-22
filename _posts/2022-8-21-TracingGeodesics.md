@@ -32,7 +32,11 @@ A coordinate system being a set of several numbers labeling each point in the sp
 
 In physics, or more generally differential geometry, a metric is defined as an integral("sum") of something called the metric tensor. A metric tensor is a bilinear form \\( g(a, b) \\), it essentially maps pairs of vectors to real numbers, and is a generalization of dot product for curved spaces. So using a metric tensor we can find the length of a vector in space, and distances \\( ds \\) between infinitely close points in space.
 
-\\[ \begin{equation} ds^2 = g(dx, dx)  \end{equation} \\] 
+\\[ 
+\begin{equation} 
+  ds^2 = g(dx, dx)  
+\end{equation} 
+\\] 
 
 In our case, where we describe vectors as a set of numbers, a metric is simply a matrix product of some matrix \\( g_{\mu \nu} \\) times the vectors. For our infinitesimal distance \\( ds \\) we get this expression:
 
