@@ -38,7 +38,9 @@ $$ ds^2 = g(dx, dx) \tag{0} $$
 
 In our case, where we describe vectors as a set of numbers, a metric is simply a matrix product of some matrix \\( g_{\mu \nu} \\) times the vectors. For our infinitesimal distance \\( ds \\) we get this expression:
 
-\\[ ds^2 = \sum_{\mu \nu}^N g_{\mu \nu} dx_\mu dx_\nu \\] 
+\begin{equation}
+  ds^2 = \sum_{\mu \nu}^N g_{\mu \nu} dx_\mu dx_\nu
+\end{equation}
 
 Usually the sum is just implicitly assumed by [Einstein notation](https://en.wikipedia.org/wiki/Einstein_notation) [1].
 
