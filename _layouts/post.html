@@ -5,38 +5,31 @@ layout: default
 <script type="text/javascript"
         src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_CHTML"></script>
 		
-<script type="text/javascript">
-MathJax.Hub.Config({
-    TeX: { equationNumbers: { autoNumber: "AMS" } }
-});
 
 
+<script>
 MathJax = {
+  loader: {load: ['[tex]/tagformat']},
+  section: 1,
+  tex: {
+    tags: 'ams',
+    packages: {'[+]': ['tagformat']},
+    tagformat: {
+      number: (n) => MathJax.config.section + '.' + n
+    }
+  },
   startup: {
-    ready() {
-      const Configuration = MathJax._.input.tex.Configuration.Configuration;
-      const CommandMap = MathJax._.input.tex.SymbolMap.CommandMap;
-      new CommandMap('sections', {
-        nextSection: 'NextSection',
-        setSection: 'SetSection',
-      }, {
-        NextSection(parser, name) {
-          MathJax.config.section++;
-          parser.tags.counter = parser.tags.allCounter = 0;
-        },
-        SetSection(parser, name) {
-          const n = parser.GetArgument(name);
-          MathJax.config.section = parseInt(n);
-        }
-      });
-      Configuration.create(
-        'sections', {handler: {macro: ['sections']}}
-      );
-      MathJax.startup.defaultReady();
+    typeset: false,
+    pageReady() {
+      MathJax.typeset(['#section1']);
+      MathJax.config.section = 2
+      MathJax.startup.input[0].parseOptions.tags.counter = 0;
+      MathJax.startup.input[0].parseOptions.tags.allCounter = 0;
+      MathJax.typeset(['#section2']);
+      MathJax.typeset(['#refs']);
     }
   }
-};
-</script>
+};</script>
 
 <article class="post">
   <h1>{{ page.title }}</h1>
