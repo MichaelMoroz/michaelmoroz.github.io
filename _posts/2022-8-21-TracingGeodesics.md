@@ -10,9 +10,7 @@ When dealing with renders of things like warp drives and black holes we usually 
 
 The main ingredient of any GR render is figuring out how the rays of light move around. Knowing how light moves we can trace rays from the camera into the scene as see where the light came from. So to render a basic scene without objects we simply trace a ray for each pixel and assignt the color of the pixel to the color of the skybox in the direction in which the ray ends up pointing to. 
 
-### Contents
 - [Introduction](#introduction)
-- [Contents](#contents)
 - [What are geodesics?](#what-are-geodesics)
 - [Mathematical description of shortest path](#mathematical-description-of-shortest-path)
 - [Lagrangian mechanics description of shortest path](#lagrangian-mechanics-description-of-shortest-path)
