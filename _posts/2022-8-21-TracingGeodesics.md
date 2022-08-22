@@ -4,13 +4,10 @@ title: Visualizing General Relativity
 image: SpaceEngineBH.jpg
 ---
 
-### Introduction
-
 When dealing with renders of things like warp drives and black holes we usually just expect to see a simple approximation or an artist rendition, usually just assuming that the math required to pull off something accurate would require someone with at least a PhD in Mathematical Physics, which in most cases is somewhat true, but not necessarily. In this blog post I'll try to explain a way to do actually accurate visualizations within a 100 or so lines of code, for basically any kind of space time for which you can write its metric as code. The detailed mathematical derivation of this approach might be somewhat math heavy though.
 
 The main ingredient of any GR render is figuring out how the rays of light move around. Knowing how light moves we can trace rays from the camera into the scene as see where the light came from. So to render a basic scene without objects we simply trace a ray for each pixel and assignt the color of the pixel to the color of the skybox in the direction in which the ray ends up pointing to. 
 
-- [Introduction](#introduction)
 - [What are geodesics?](#what-are-geodesics)
 - [Mathematical description of shortest path](#mathematical-description-of-shortest-path)
 - [Lagrangian description of a geodesic](#lagrangian-description-of-a-geodesic)
