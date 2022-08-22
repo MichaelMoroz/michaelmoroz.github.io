@@ -182,6 +182,7 @@ To get the "time" derivatives you simply need to multiply both sides by the metr
 
 \begin{equation}
  \frac{dx^i}{dt} = \frac{1}{2} g^{i j} p_j 
+ \label{dxdt}
 \end{equation}
 
 And the Hamiltonian itself:
@@ -192,7 +193,7 @@ And the Hamiltonian itself:
 
 Turns out that for this simple choice of a geodesic Lagrangian, the Hamiltonian is equal to the Lagrangian!
 
-Also we want to know the Hamiltonian as a function of the generalized momentum by substituting from equation (21):
+Also we want to know the Hamiltonian as a function of the generalized momentum by substituting into the Hamiltonian equation \eqref{dxdt}:
 
 \begin{equation}
  H = g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = \frac{1}{4} g^{i j} p_i p_j 
