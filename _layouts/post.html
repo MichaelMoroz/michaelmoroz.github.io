@@ -5,31 +5,11 @@ layout: default
 <script type="text/javascript"
         src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_CHTML"></script>
 		
-
-
-<script>
-MathJax = {
-  loader: {load: ['[tex]/tagformat']},
-  section: 1,
-  tex: {
-    tags: 'ams',
-    packages: {'[+]': ['tagformat']},
-    tagformat: {
-      number: (n) => MathJax.config.section + '.' + n
-    }
-  },
-  startup: {
-    typeset: false,
-    pageReady() {
-      MathJax.typeset(['#section1']);
-      MathJax.config.section = 2
-      MathJax.startup.input[0].parseOptions.tags.counter = 0;
-      MathJax.startup.input[0].parseOptions.tags.allCounter = 0;
-      MathJax.typeset(['#section2']);
-      MathJax.typeset(['#refs']);
-    }
-  }
-};</script>
+<script type="text/javascript">
+MathJax.Hub.Config({
+    TeX: { equationNumbers: { autoNumber: "AMS" } }
+});
+</script>
 
 <article class="post">
   <h1>{{ page.title }}</h1>

@@ -32,7 +32,6 @@ A coordinate system being a set of several numbers labeling each point in the sp
 
 In physics, or more generally differential geometry, a metric is defined as an integral("sum") of something called the metric tensor. A metric tensor is a bilinear form \\( g(a, b) \\), it essentially maps pairs of vectors to real numbers, and is a generalization of dot product for curved spaces. So using a metric tensor we can find the length of a vector in space, and distances \\( ds \\) between infinitely close points in space.
  
-
 \begin{equation}
    ds^2 = g(dx, dx)
 \end{equation}
@@ -73,8 +72,6 @@ Where \\( \frac{dx^i}{dt} \\) is simply how fast the coordinate x changes with r
 
 Now our main question is how do we minimize the path length? Here is where we introduce a thing called calculus of variations, which is rouhtly speaking a way to find how a functional(distance) changes by varying its input function(path). Such derivatives has similar properties to normal function derivatives. And in fact, similarly to calculus, to find the extremum of a function(min, max or stationary point), we simply need to equate the variation to 0.
 
-\nextSection
-
 ### Lagrangian mechanics description of shortest path
 There is an entire branch of physics related to variational principles, and basically any kind of physical system has some kind of value it likes to minimize(or more generally make unchanging under small variations of path). That value is called action, and the function under the integral is called the Lagrangian function of the system. The branch of physics studying Lagrangians of systems is called Lagrangian mechanics. 
 
@@ -111,6 +108,7 @@ You can find a derivation of those, for example, [here](https://mathworld.wolfra
 
 \begin{equation}
  \frac{\partial L}{\partial x^i} - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx^i}{dt}} = 0 
+ \label{el}
 \end{equation}
 
 </details>
@@ -127,15 +125,17 @@ Then we take the derivative with respect to to the path parameter:
 \begin{equation}
  \frac{d}{dt} \left( 2 g_{i \nu} \frac{dx^\nu}{dt} \right) =  2 \frac{d g_{i \nu} }{dt}  \frac{dx^\nu}{dt} + 2 g_{i \nu} \frac{d^2x^\nu}{dt^2} = 
 2 \frac{d g_{i \nu} }{dx^\mu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} + 2 g_{i \nu} \frac{d^2x^\nu}{dt^2} 
+\label{el1}
 \end{equation}
 
 And lastly:
 
 \begin{equation}
  \frac{\partial L}{\partial x^i} = \frac{d g_{\mu \nu} }{dx^i} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} 
+ \label{el2}
 \end{equation}
 
-Substituting (12) and (13) into Euler-Lagrange equations (10) leads us to the equation of a geodesic:
+Substituting \eqref{el1} and \eqref{el2} into Euler-Lagrange equations \eqref{el} leads us to the equation of a geodesic:
 
 \begin{equation}
  \frac{d g_{\mu \nu} }{dx^i} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} - 2 \frac{d g_{i \nu} }{dx^\mu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} -2 g_{i \nu} \frac{d^2x^\nu}{dt^2} = 0 
