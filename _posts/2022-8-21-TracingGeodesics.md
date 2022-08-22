@@ -4,8 +4,6 @@ title: Visualizing General Relativity
 image: SpaceEngineBH.jpg
 ---
 
----
-
 ### Introduction
 
 When dealing with renders of things like warp drives and black holes we usually just expect to see a simple approximation or an artist rendition, usually just assuming that the math required to pull off something accurate would require someone with at least a PhD in Mathematical Physics, which in most cases is somewhat true, but not necessarily. In this blog post I'll try to explain a way to do actually accurate visualizations within a 100 or so lines of code, for basically any kind of space time for which you can write its metric as code. The detailed mathematical derivation of this approach might be somewhat math heavy though.
@@ -207,7 +205,7 @@ And the Hamiltonian itself:
 
 Turns out that for this simple choice of a geodesic Lagrangian, the Hamiltonian is equal to the Lagrangian!
 
-Also we want to know the Hamiltonian as a function of the generalized momentum by substituting into the Hamiltonian equation \eqref{dxdt}:
+Also we want to know the Hamiltonian as a function of the generalized momentum by substituting \eqref{dxdt} into the Hamiltonian equation:
 
 \begin{equation}
  H = g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = \frac{1}{4} g^{i j} p_i p_j 
