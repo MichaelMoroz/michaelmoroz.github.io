@@ -79,7 +79,7 @@ There is an entire branch of physics related to variational principles, and basi
 In our case the Lagrangian can be written like this:
 
 \begin{equation}
- L = \sqrt{g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt}} 
+ L = \sqrt{g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt}} \tag{2.1}
 \end{equation}
 
 Turns out we don't actually need the square root for the minimum of the functional to be a geodesic, we can simply use this as our geodesic Lagrangian:
