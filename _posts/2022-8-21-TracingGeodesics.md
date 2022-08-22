@@ -142,13 +142,14 @@ Also we want to know the Hamiltonian as a function of the generalized momentum b
 
 While the equations of motion will simply be:
 
-\\[ \frac{dp^i}{dt} = - \frac{\partial H}{\partial x^i} \\]
+\\[ \frac{dp_i}{dt} = - \frac{\partial H}{\partial x^i} \\]
 \\[ \frac{dx^i}{dt} = \frac{1}{2} g^{i j} p_j \\]
 
 In fact this is all we need to write a numerical geodesic integrator! 
 
 ### Writing this as code
 
+You might have noticed that in the final Hamilton's equations of motion I didn't write out \\( \frac{\partial H}{\partial x^i} \\), this is actually important! We want to keep the derivative of the Hamiltonian as is, because then instead of computing the 64 derivatives of the metric tensor, we only need 4 to find the Hamiltonian gradient. This is the main simplification of the geodesic tracing algorithm.
 
 ### References 
 * [1] [Einstein notation](https://en.wikipedia.org/wiki/Einstein_notation)
