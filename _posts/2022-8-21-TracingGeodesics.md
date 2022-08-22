@@ -35,30 +35,35 @@ In physics, or more generally differential geometry, a metric is defined as an i
 
 \begin{equation}
    ds^2 = g(dx, dx)
+   \section{1}
 \end{equation}
 
 In our case, where we describe vectors as a set of numbers, a metric is simply a matrix product of some matrix \\( g_{\mu \nu} \\) times the vectors. For our infinitesimal distance \\( ds \\) we get this expression:
 
 \begin{equation}
   ds^2 = \sum_{\mu \nu}^N g_{\mu \nu} dx_\mu dx_\nu
+  \section{1}
 \end{equation}
 
 Usually the sum is just implicitly assumed by [Einstein notation](https://en.wikipedia.org/wiki/Einstein_notation) [1].
 
 \begin{equation}
  ds^2 = g_{\mu \nu} dx^\mu dx^\nu 
+ \section{1}
 \end{equation} 
 
 Here we can actually see that for some simple choices of \\( g_{\mu \nu} \\) we can get the distances by Pythagoras' theorem. Specifically for the case when the metric tensor matrix is a unit matrix.
 
 \begin{equation}
- ds^2 = dx_1^2 + dx_2^2 + dx_3^2 
+ ds^2 = dx_1^2 + dx_2^2 + dx_3^2
+ \section{1} 
 \end{equation}
 
 For a flat space-time like space we actually get something similar but with the exception that the time coordinate component is with a negative sign.
 
 \begin{equation}
- ds^2 = - dx_0^2 + dx_1^2 + dx_2^2 + dx_3^2 
+ ds^2 = - dx_0^2 + dx_1^2 + dx_2^2 + dx_3^2
+ \section{1} 
 \end{equation}
 
 Here I used the \\( (- + + +) \\) signature, but signs can actually be flipped without changing the geodesics, and in some cases, like for particle physics, it makes more sense to use the opposite \\( (+ - - -) \\) signature.
@@ -67,6 +72,7 @@ Going back to the main question of computing distances, to compute the length be
 
 \begin{equation}
  l = \int_A^B \sqrt{g_{\mu \nu} dx^\mu dx^\nu} = \int_A^B \sqrt{g_{\mu \nu} dx^\mu dx^\nu} \frac{dt}{dt} = \int_A^B \sqrt{g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt}} dt
+ \section{1}
 \end{equation} 
 
 Where \\( \frac{dx^i}{dt} \\) is simply how fast the coordinate x changes with respect to the path parameter ("clock"), in some sense can be interpreted as the velocity. 
