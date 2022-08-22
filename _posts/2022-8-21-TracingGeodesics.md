@@ -229,6 +229,8 @@ In fact this is all we need to write a numerical geodesic integrator!
 
 You might have noticed that in the final Hamilton's equations of motion I didn't write out \\( \frac{\partial H}{\partial x^i} \\), this is actually important! We want to keep the derivative of the Hamiltonian as is, because then instead of computing the 64 derivatives of the metric tensor, we only need 4 to find the Hamiltonian gradient. This is the main simplification of the geodesic tracing algorithm.
 
+---
+
 ### References 
 * [1] [Einstein notation](https://en.wikipedia.org/wiki/Einstein_notation)
 * [2] [Equivalence of squared Lagrangian to Lagrangian](https://physics.stackexchange.com/questions/149082/geodesic-equation-from-variation-is-the-squared-lagrangian-equivalent)
