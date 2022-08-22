@@ -12,6 +12,8 @@ image: SpaceEngineBH.jpg
 - [Writing this as code](#writing-this-as-code)
 - [References](#references)
 
+---
+
 ### Introduction
 
 When dealing with renders of things like warp drives and black holes we usually just expect to see a simple approximation or an artist rendition, usually just assuming that the math required to pull off something accurate would require someone with at least a PhD in Mathematical Physics, which in most cases is somewhat true, but not necessarily. In this blog post I'll try to explain a way to do actually accurate visualizations within a 100 or so lines of code, for basically any kind of space time for which you can write its metric as code. The detailed mathematical derivation of this approach might be somewhat math heavy though.
