@@ -98,7 +98,8 @@ So our goal right now is to minimize this functional:
 In general the minimum of a functional like this can be found by applying the [Euler-Lagrange equations](https://en.wikipedia.org/wiki/Euler%E2%80%93Lagrange_equation) [3]:
 
 \begin{equation}
- \frac{\partial L}{\partial x^i} - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx^i}{dt}} = 0 
+  \frac{\partial L}{\partial x^i} - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx^i}{dt}} = 0 
+  \label{el}
 \end{equation}
 
 You can find a derivation of those, for example, [here](https://mathworld.wolfram.com/Euler-LagrangeDifferentialEquation.html) [4]
@@ -108,7 +109,6 @@ You can find a derivation of those, for example, [here](https://mathworld.wolfra
 
 \begin{equation}
  \frac{\partial L}{\partial x^i} - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx^i}{dt}} = 0 
- \label{el}
 \end{equation}
 
 </details>
