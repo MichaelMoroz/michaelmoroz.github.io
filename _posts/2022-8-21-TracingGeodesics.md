@@ -33,8 +33,9 @@ A coordinate system being a set of several numbers labeling each point in the sp
 In physics, or more generally differential geometry, a metric is defined as an integral("sum") of something called the metric tensor. A metric tensor is a bilinear form \\( g(a, b) \\), it essentially maps pairs of vectors to real numbers, and is a generalization of dot product for curved spaces. So using a metric tensor we can find the length of a vector in space, and distances \\( ds \\) between infinitely close points in space.
  
 
-$$ ds^2 = g(dx, dx) \tag{0} $$ 
-
+\begin{equation}
+   ds^2 = g(dx, dx)
+\end{equation}
 
 In our case, where we describe vectors as a set of numbers, a metric is simply a matrix product of some matrix \\( g_{\mu \nu} \\) times the vectors. For our infinitesimal distance \\( ds \\) we get this expression:
 
@@ -180,7 +181,7 @@ And the Hamiltonian itself:
 
 Turns out that for this simple choice of a geodesic Lagrangian, the Hamiltonian is equal to the Lagrangian!
 
-Also we want to know the Hamiltonian as a function of the generalized momentum by substituting equation (N):
+Also we want to know the Hamiltonian as a function of the generalized momentum by substituting from equation (20):
 
 \begin{equation}
  H = g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = \frac{1}{4} g^{i j} p_i p_j 
@@ -206,6 +207,6 @@ You might have noticed that in the final Hamilton's equations of motion I didn't
 * [2] [Equivalence of squared Lagrangian to Lagrangian](https://physics.stackexchange.com/questions/149082/geodesic-equation-from-variation-is-the-squared-lagrangian-equivalent)
 * [3] [Euler-Lagrange equations](https://en.wikipedia.org/wiki/Euler%E2%80%93Lagrange_equation) 
 * [4] [Euler-Lagrange equations derivation](https://mathworld.wolfram.com/Euler-LagrangeDifferentialEquation.html)
-* [5] [Hamilltonian equations derivation](https://en.wikipedia.org/wiki/Hamiltonian_mechanics#Deriving_Hamilton's_equations)
+* [5] [Hamiltonian equations derivation](https://en.wikipedia.org/wiki/Hamiltonian_mechanics#Deriving_Hamilton's_equations)
 * [6] [Legendre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/)
 
