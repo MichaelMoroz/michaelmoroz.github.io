@@ -13,6 +13,7 @@ The main ingredient of any GR render is figuring out how the rays of light move 
 - [Lagrangian description of a geodesic](#lagrangian-description-of-a-geodesic)
 - [Hamiltonian description of a geodesic](#hamiltonian-description-of-a-geodesic)
 - [Writing a Hamiltonian geodesic tracer in GLSL](#writing-a-hamiltonian-geodesic-tracer-in-glsl)
+- [Conclusions](#conclusions)
 - [References](#references)
   
 ---
@@ -429,7 +430,14 @@ void TraceGeodesic(inout vec3 pos, inout vec3 dir, inout float time)
 
 ```
 
+Also here is a shadertoy example of this algorithm in action together with some optimizations and Kerr-Newman metric.
+
+<center><iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/NtSGWG?gui=true&t=10&paused=true&muted=false" allowfullscreen></iframe></center>
+
 ---
+
+
+### Conclusions
 
 
 ### References 
