@@ -430,9 +430,9 @@ void TraceGeodesic(inout vec3 pos, inout vec3 dir, inout float time)
 
 ```
 
-Also here is a shadertoy example of this algorithm in action together with some optimizations and Kerr-Newman metric.
+Also here is a shadertoy example of this algorithm in action together with some optimizations and Kerr-Newman metric. (Restart if black)
 
-<center><iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/NtSGWG?gui=true&t=10&paused=true&muted=false" allowfullscreen></iframe></center>
+<center><iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/NtSGWG?gui=true&t=10&paused=false&muted=false" allowfullscreen></iframe></center>
 
 ---
 
