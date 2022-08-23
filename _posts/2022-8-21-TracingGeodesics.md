@@ -124,13 +124,13 @@ To find the minimizing path(or more generally, stationary path) of a functional 
   \delta S = 0
 \end{equation*}
 
-Where the variation of the action is found by adding a small variation \\( \delta x \\) to the path: \\( L(t, x + \delta x, \frac{d(x + \delta x)}{dt}) \\)
+Where the variation of the action is found by adding a small variation \( \delta x \) to the path: \( L(t, x + \delta x, \frac{d(x + \delta x)}{dt}) \)
 
 \begin{equation*}
   \delta S = \int_A^B \left( \frac{\partial L}{\partial x} \delta x + \frac{\partial L}{\partial \frac{dx}{dt}} \frac{d(\delta x)}{dt} \right) dt
 \end{equation*}
 
-We use integration by parts to get rid of the derivative \\( \frac{d}{dt} \\) off the path variation 
+We use integration by parts to get rid of the derivative \( \frac{d}{dt} \) off the path variation 
 
 \begin{equation*}
   \delta S = \int_A^B \left( \frac{\partial L}{\partial x} \delta x - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx}{dt}} \delta x \right) dt + \left( \frac{\partial L}{\partial \frac{dx}{dt}} \delta x \right) \rvert_A^B
@@ -212,7 +212,7 @@ So here comes the star of the show - Hamiltonian mechanics. Hamiltonian equation
 \end{equation}
 
 The derivation of Hamilton's equations of motion can be found [here](https://en.wikipedia.org/wiki/Hamiltonian_mechanics#Deriving_Hamilton's_equations) [5].
-\\( p \\) is the so called generalized momentum, it's the derivative of the Lagrangian with respect to the coordinate parameter("time") derivative.
+\\( p \\) is the so called generalized momentum, it's the derivative of the Lagrangian with respect to the path parameter.
 
 \begin{equation}
  p_i = \frac{\partial L}{\partial \frac{dx^i}{dt} } 
