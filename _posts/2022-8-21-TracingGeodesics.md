@@ -163,7 +163,7 @@ You can find a more detailed derivation [here](https://mathworld.wolfram.com/Eul
 
 ---
 
-Lets derive the Euler-Lagrange equation for our geodesic Lagrangian:
+Lets derive the Euler-Lagrange equationsfor our geodesic Lagrangian (there is an equation for each coordinate \( x^i \) ):
 
 \begin{equation}
  \frac{\partial L}{\partial \frac{dx^i}{dt}} = 
