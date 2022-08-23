@@ -133,7 +133,7 @@ Where the variation of the action is found by adding a small variation \( \delta
 We use integration by parts to get rid of the derivative \( \frac{d}{dt} \) off the path variation 
 
 \begin{equation*}
-  \delta S = \int_A^B \left( \frac{\partial L}{\partial x} \delta x - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx}{dt}} \delta x \right) dt + \left( \frac{\partial L}{\partial \frac{dx}{dt}} \delta x \right) \rvert_A^B
+  \delta S = \int_A^B \left( \frac{\partial L}{\partial x} \delta x - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx}{dt}} \delta x \right) dt + \left( \frac{\partial L}{\partial \frac{dx}{dt}} \delta x \right) \bigg\rvert_A^B
 \end{equation*}
 
 Since we keep the endpoints of the path stationary the last terms are equal to zero:
