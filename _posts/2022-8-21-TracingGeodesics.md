@@ -136,7 +136,7 @@ We use integration by parts to get rid of the derivative \( \frac{d}{dt} \) off 
   \delta S = \int_A^B \left( \frac{\partial L}{\partial x} \delta x - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx}{dt}} \delta x \right) dt + \left( \frac{\partial L}{\partial \frac{dx}{dt}} \delta x \right) \biggr \rvert_A^B
 \end{equation*}
 
-Since we keep the endpoints of the path stationary the last terms are equal to zero:
+Since we keep the endpoints of the path stationary the last term is equal to zero:
 
 \begin{equation*}
   \delta S = \int_A^B \left( \frac{\partial L}{\partial x} \delta x - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx}{dt}} \delta x \right) dt =
