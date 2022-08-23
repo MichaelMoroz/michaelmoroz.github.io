@@ -335,7 +335,7 @@ float Lagrangian(vec4 x, vec4 dxdt)
 
 ```
 
-Surprisingly enough thats it, GLSL already has a matrix inverse function `inverse()`, on top of it the Hamiltonian is just the dot product(in GLSL sense) of `g_inv*p` and `p`, which are the contravariant and covariant momentum vectors respectively. The contravariant momentum actually just being the time derivative of the coordinate `dxdt`, i.e. `dot(dxdt,p)`.
+Surprisingly enough that's it, GLSL already has a matrix inverse function `inverse()`, on top of it the Hamiltonian is just the dot product(in GLSL sense) of `g_inv*p` and `p`, which are the contravariant and covariant momentum vectors respectively. The contravariant momentum actually just being the time derivative of the coordinate `dxdt`, i.e. `dot(dxdt,p)`.
 
 After this we need to compute the 4D gradient of the Hamiltonian. We can do this by using a forward numerical difference in all 4 spacial directions, using some small value `eps`:
 
