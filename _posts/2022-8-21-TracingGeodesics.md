@@ -271,9 +271,9 @@ And this is all we need to write a numerical geodesic integrator!
 
 You might have noticed that in the final Hamilton's equations of motion I didn't write out \\( \frac{\partial H}{\partial x^i} \\), this is actually important! We want to keep the derivative of the Hamiltonian as is, because then instead of computing the 64 derivatives of the metric tensor, we only need 4 to find the Hamiltonian gradient. This is the main simplification of the geodesic tracing algorithm.
 
-Here we will use the GLSL shading language, since it has variables and functions which map quite well to the mathematical operations we will perform here.
+Here we will use the GLSL shading language, since it has variables and functions which map quite well to the mathematical operations we will perform here. On top of that we can easily then make a real time GR visualization shader. 
 
-First of all we need a function that evaluates the metric tensor at a 4d point in space and time. Let's use the Alcubierre warp drive metric as an example, since it is quite simple.
+First of all we need a function that evaluates the metric tensor at a 4d point in space and time. Let's use the [Alcubierre warp drive](https://en.wikipedia.org/wiki/Alcubierre_drive) [7] metric as an example, since it is quite simple.
 
 ```glsl
 
@@ -314,7 +314,7 @@ float Hamiltonian(vec4 x, vec4 p)
 
 Surprisingly enough thats it, GLSL already has a matrix inverse function `inverse()`, on top of it the Hamiltonian is just the dot product(in GLSL sense) of g_inv*p and p, which are the contravariant and covariant momentum vectors respectively. 
 
-After this we need to compute the gradient of the Hamiltonian. We can do this by using a forward numerical difference in all 4 spacial directions, using some small value eps:
+After this we need to compute the gradient of the Hamiltonian. We can do this by using a forward numerical difference in all 4 spacial directions, using some small value `eps`:
 
 ```glsl
 
