@@ -408,6 +408,29 @@ vec3 GetDirection(vec4 p)
 
 ```
 
+So in the end the final simple algorithm will look like this:
+
+```glsl
+
+void TraceGeodesic(inout vec3 pos, inout vec3 dir, inout float time)
+{
+  vec4 x = vec4(time, pos);
+  vec4 p = GetNullMomentum(dir);
+
+  const int steps = 256;
+  for(int i = 0; i < steps; i++)
+  {
+    IntegrationStep(x, p);
+    //you can add a stop condition here when x is below the even horizon for example
+  }
+
+  pos = x.yzw;
+  time = x.x;
+  dir = GetDirection(p);
+}
+
+```
+
 ### References 
 * [1] [Einstein notation](https://en.wikipedia.org/wiki/Einstein_notation)
 * [2] [Equivalence of squared Lagrangian to Lagrangian](https://physics.stackexchange.com/questions/149082/geodesic-equation-from-variation-is-the-squared-lagrangian-equivalent)
