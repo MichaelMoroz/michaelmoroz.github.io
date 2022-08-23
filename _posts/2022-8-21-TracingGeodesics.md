@@ -157,9 +157,9 @@ Which holds true when the path satisfies the expression under the integral
 
 Which is the Euler-Lagrange equation!
 
-You can find a more detailed derivation [here](https://mathworld.wolfram.com/Euler-LagrangeDifferentialEquation.html) [4]
-
 </details>
+
+You can find a more detailed derivation [here](https://mathworld.wolfram.com/Euler-LagrangeDifferentialEquation.html) [4]
 
 ---
 
