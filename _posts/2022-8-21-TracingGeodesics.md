@@ -25,7 +25,7 @@ A geodesic is essentially just a fancy word for path of shortest length between 
 ---
 
 ### Mathematical description of shortest path
-*Here I'll try to very roughly explain the derivation, a more in-depth explanation would at least require a multi-part series of blog posts. And if you wish to skip over the math part, jump to the last part.*
+*Here I'll try to very roughly explain the derivation, a more in-depth explanation would at least require a multi-part series of blog posts. And if you wish to skip over the math part, jump to [Writing a Hamiltonian geodesic tracer in GLSL](#writing-a-hamiltonian-geodesic-tracer-in-glsl).*
 
 Mathematically speaking we have some coordinate system, a path, and a way to compute distances between 2 points. 
 
@@ -162,6 +162,8 @@ Which is the Euler-Lagrange equation!
 You can find a more detailed derivation [here](https://mathworld.wolfram.com/Euler-LagrangeDifferentialEquation.html) [4]
 
 ---
+
+Lets derive the Euler-Lagrange equation for our geodesic Lagrangian:
 
 \begin{equation}
  \frac{\partial L}{\partial \frac{dx^i}{dt}} = 
