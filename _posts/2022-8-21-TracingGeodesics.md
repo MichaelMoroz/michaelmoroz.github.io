@@ -251,6 +251,7 @@ Also we want to know the Hamiltonian as a function of the generalized momentum b
 
 \begin{equation}
  H = g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = \frac{1}{4} g^{i j} p_i p_j 
+ \label{hamiltonian}
 \end{equation}
 
 While the equations of motion will simply be:
@@ -300,7 +301,7 @@ mat4 Metric(vec4 x)
 
 In our case x is a 4D vector representing position. The first component `x.x` or `x[0]` being time. As an output we get a 4 by 4 matrix represented by `mat4` in GLSL. 
 
-Then we need to write down the Hamiltonian. The Hamiltonian is a function that takes 2 things, the position in space time, and the 4d momentum vector, and outputs a scalar.
+Then we need to write down the Hamiltonian \eqref{hamiltonian}. The Hamiltonian is a function that takes 2 things, the position in space time, and the 4d momentum vector, and outputs a scalar.
 
 ```glsl
 
