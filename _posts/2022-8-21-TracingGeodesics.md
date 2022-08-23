@@ -94,10 +94,16 @@ Turns out we don't actually need the square root for the minimum of the function
 
 The proof of this you can find [here](https://physics.stackexchange.com/questions/149082/geodesic-equation-from-variation-is-the-squared-lagrangian-equivalent) [2]. The only difference such simplification makes is that the parametrization of the path might be different, but the path itself will be the same.
 
+Also we want this with a 1/2 factor, to simplify the equations down the line.
+
+\begin{equation}
+ L = \frac{1}{2} g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} 
+\end{equation}
+
 So our goal right now is to minimize this functional:
 
 \begin{equation}
- S = \int_A^B  g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} dt 
+ S = \int_A^B \frac{1}{2} g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} dt 
 \end{equation} 
 
 In general the minimum of a functional like this can be found by applying the [Euler-Lagrange equations](https://en.wikipedia.org/wiki/Euler%E2%80%93Lagrange_equation) [3]:
@@ -169,33 +175,33 @@ Lets derive the Euler-Lagrange equations for our geodesic Lagrangian (there is a
 
 \begin{equation}
  \frac{\partial L}{\partial \frac{dx^i}{dt}} = 
-    \frac{\partial  }{\partial \frac{dx^i}{dt}} g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} = 
-    g_{i \nu} \frac{dx^\nu}{dt} + g_{\mu i} \frac{dx^\mu}{dt} = 
-    2 g_{i \nu} \frac{dx^\nu}{dt} 
+    \frac{1}{2} \frac{\partial  }{\partial \frac{dx^i}{dt}} g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} = 
+    \frac{1}{2} g_{i \nu} \frac{dx^\nu}{dt} + \frac{1}{2} g_{\mu i} \frac{dx^\mu}{dt} = 
+    g_{i \nu} \frac{dx^\nu}{dt} 
 \end{equation}
 
 Then we take the derivative with respect to to the path parameter:
 
 \begin{equation}
- \frac{d}{dt} \left( 2 g_{i \nu} \frac{dx^\nu}{dt} \right) =  2 \frac{d g_{i \nu} }{dt}  \frac{dx^\nu}{dt} + 2 g_{i \nu} \frac{d^2x^\nu}{dt^2} = 
-2 \frac{d g_{i \nu} }{dx^\mu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} + 2 g_{i \nu} \frac{d^2x^\nu}{dt^2} 
+ \frac{d}{dt} \left( g_{i \nu} \frac{dx^\nu}{dt} \right) =   \frac{d g_{i \nu} }{dt}  \frac{dx^\nu}{dt} + g_{i \nu} \frac{d^2x^\nu}{dt^2} = 
+ \frac{d g_{i \nu} }{dx^\mu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} +  g_{i \nu} \frac{d^2x^\nu}{dt^2} 
 \label{el1}
 \end{equation}
 
 And lastly:
 
 \begin{equation}
- \frac{\partial L}{\partial x^i} = \frac{d g_{\mu \nu} }{dx^i} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} 
+ \frac{\partial L}{\partial x^i} = \frac{1}{2} \frac{d g_{\mu \nu} }{dx^i} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} 
  \label{el2}
 \end{equation}
 
 Substituting \eqref{el1} and \eqref{el2} into Euler-Lagrange equations \eqref{el} leads us to the equation of a geodesic:
 
 \begin{equation}
- \frac{d g_{\mu \nu} }{dx^i} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} - 2 \frac{d g_{i \nu} }{dx^\mu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} -2 g_{i \nu} \frac{d^2x^\nu}{dt^2} = 0 
+ \frac{1}{2} \frac{d g_{\mu \nu} }{dx^i} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} - \frac{d g_{i \nu} }{dx^\mu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} - g_{i \nu} \frac{d^2x^\nu}{dt^2} = 0 
 \end{equation}
 
-Multiplying by the metric tensor inverse \\( - \frac{1}{2} g^{i \nu} \\) we get:
+Multiplying by the metric tensor inverse \\( - g^{i \nu} \\) we get:
 
 \begin{equation}
  \frac{d^2x^i}{dt^2} +  g^{i \nu} \left( \frac{d g_{i \nu} }{dx^\mu} - \frac{1}{2} \frac{d g_{\mu \nu} }{dx^i}  \right) \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} = 0 
@@ -231,21 +237,21 @@ And to get the Hamiltonian itself you need to apply the [Legendre Transform](htt
 And for our case the momentum would be the following, which we already computed when writing down the Euler-Lagrange equations:
 
 \begin{equation}
- p_i = 2 g_{i j} \frac{dx^j}{dt} 
+ p_i = g_{i j} \frac{dx^j}{dt} 
  \label{momentum}
 \end{equation}
 
 To get the "time" derivatives you simply need to multiply both sides by the metric tensor inverse:
 
 \begin{equation}
- \frac{dx^i}{dt} = \frac{1}{2} g^{i j} p_j 
+ \frac{dx^i}{dt} = g^{i j} p_j 
  \label{dxdt}
 \end{equation}
 
 And the Hamiltonian itself:
 
 \begin{equation}
- H = \sum_{i}^N \frac{dx^i}{dt} p_i - L =  2 g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} - g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} =  g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = L
+ H = \sum_{i}^N \frac{dx^i}{dt} p_i - L =  g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} - \frac{1}{2} g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} =  \frac{1}{2} g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = L
 \end{equation}
 
 Turns out that for this simple choice of a geodesic Lagrangian, the Hamiltonian is equal to the Lagrangian!
@@ -253,7 +259,7 @@ Turns out that for this simple choice of a geodesic Lagrangian, the Hamiltonian 
 Also we want to know the Hamiltonian as a function of the generalized momentum by substituting \eqref{dxdt} into the Hamiltonian equation:
 
 \begin{equation}
- H = g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = \frac{1}{4} g^{i j} p_i p_j 
+ H = \frac{1}{2} g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = \frac{1}{2} g^{i j} p_i p_j 
  \label{hamiltonian}
 \end{equation}
 
@@ -265,7 +271,7 @@ While the equations of motion will simply be:
 \end{equation}
 
 \begin{equation}
- \frac{dx^i}{dt} = \frac{1}{2} g^{i j} p_j 
+ \frac{dx^i}{dt} = g^{i j} p_j 
  \label{eqmotion2}
 \end{equation}
 
@@ -313,7 +319,7 @@ Then we need to write down the Hamiltonian \eqref{hamiltonian}. The Hamiltonian 
 float Hamiltonian(vec4 x, vec4 p)
 {
   mat4 g_inv = inverse(Metric(x));
-  return dot(g_inv*p,p);
+  return 0.5*dot(g_inv*p,p);
 }
 
 ```
@@ -324,7 +330,7 @@ As a bonus here is the Lagrangian
 
 float Lagrangian(vec4 x, vec4 dxdt)
 {
-  return dot(Metric(x)*dxdt,dxdt);
+  return 0.5*dot(Metric(x)*dxdt,dxdt);
 }
 
 ```
