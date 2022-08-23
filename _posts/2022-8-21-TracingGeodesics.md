@@ -369,8 +369,6 @@ Before tracing the geodesic you can use the equation \eqref{momentum}
 p = Metric(x) * dxdt;
 
 ```
----
-
 But what is dxdt? It's nothing more than the 4D direction the ray moves inside space time. There are actually 3 categories the directions can fall into:
 * Time-like, when \\( A < 0 \\)
 * Null, when \\( A = 0 \\)
@@ -430,6 +428,9 @@ void TraceGeodesic(inout vec3 pos, inout vec3 dir, inout float time)
 }
 
 ```
+
+---
+
 
 ### References 
 * [1] [Einstein notation](https://en.wikipedia.org/wiki/Einstein_notation)
