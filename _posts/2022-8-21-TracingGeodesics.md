@@ -163,7 +163,7 @@ You can find a more detailed derivation [here](https://mathworld.wolfram.com/Eul
 
 ---
 
-Lets derive the Euler-Lagrange equations for our geodesic Lagrangian (there is an equation for each coordinate \( x^i \) ):
+Lets derive the Euler-Lagrange equations for our geodesic Lagrangian (there is an equation for each coordinate \\( x^i \\) ):
 
 \begin{equation}
  \frac{\partial L}{\partial \frac{dx^i}{dt}} = 
@@ -258,10 +258,12 @@ While the equations of motion will simply be:
 
 \begin{equation}
  \frac{dp_i}{dt} = - \frac{\partial H}{\partial x^i} 
+ \label{eqmotion1}
 \end{equation}
 
 \begin{equation}
  \frac{dx^i}{dt} = \frac{1}{2} g^{i j} p_j 
+ \label{eqmotion2}
 \end{equation}
 
 And this is all we need to write a numerical geodesic integrator! 
@@ -313,7 +315,18 @@ float Hamiltonian(vec4 x, vec4 p)
 
 ```
 
-Surprisingly enough thats it, GLSL already has a matrix inverse function `inverse()`, on top of it the Hamiltonian is just the dot product(in GLSL sense) of g_inv*p and p, which are the contravariant and covariant momentum vectors respectively. 
+As a bonus here is the Lagrangian
+
+```glsl
+
+float Lagrangian(vec4 x, vec4 dxdt)
+{
+  return dot(Metric(x)*dxdt,dxdt);
+}
+
+```
+
+Surprisingly enough thats it, GLSL already has a matrix inverse function `inverse()`, on top of it the Hamiltonian is just the dot product(in GLSL sense) of `g_inv*p` and `p`, which are the contravariant and covariant momentum vectors respectively. 
 
 After this we need to compute the 4D gradient of the Hamiltonian. We can do this by using a forward numerical difference in all 4 spacial directions, using some small value `eps`:
 
@@ -329,6 +342,21 @@ vec4 HamiltonianGradient(vec4 x, vec4 p)
 }
 
 ```
+
+Now that we have the Hamiltonian gradient we can finally write down the equation of motion \eqref{eqmotion1} \eqref{eqmotion2} integration code
+
+```glsl
+
+vec4 IntegrationStep(inout vec4 x, inout vec4 p)
+{
+  const float TimeStep = 0.1;
+  p = p - TimeStep * HamiltonianGradient(x, p);
+  x = x + TimeStep * inverse(Metric(x)) * p;
+}
+
+```
+
+You might ask, "wait, that's it?", and ideed that is all you need to integrate the geodesic. Of course it is quite slow since we do a whopping 6 matrix inverse evaluations, which can be optimized down to 1 actually, by replacing most Hamiltonians with Lagrangians which dont have inverses, since they are equal. Even better is to have the metric inverse already computed analytically, but its not possible for every metric, especially for an implicitly defined one.
 
 ---
 
