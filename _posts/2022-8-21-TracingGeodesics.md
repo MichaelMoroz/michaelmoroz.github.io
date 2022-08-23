@@ -105,12 +105,10 @@ In general the minimum of a functional like this can be found by applying the [E
   \label{el}
 \end{equation}
 
-You can find a derivation of those, for example, [here](https://mathworld.wolfram.com/Euler-LagrangeDifferentialEquation.html) [4]
-
 ---
 
 <details>
-  <summary>Euler-Lagrange equations derivation</summary>
+<summary>Euler-Lagrange equation derivation</summary>
 
 In general the Action can be written like
 
@@ -120,17 +118,46 @@ In general the Action can be written like
 
 Where the Lagrangian is a function of the path parameter("clock"), the path itself, and the derivative of the path with respect to the path parameter.
 
-To find the minimizing path(or more generally, stationary path) of a functional we need to equate its variation to 0
+To find the minimizing path(or more generally, stationary path) of a functional we need to equate the variation of the action to 0
 
 \begin{equation*}
   \delta S = 0
 \end{equation*}
 
-Where the variation of the action is found by adding a small variation to the path \\( L(t, x + \delta x, \frac{d(x + \delta x)}{dt}\\)
+Where the variation of the action is found by adding a small variation \\( \delta x \\) to the path: \\( L(t, x + \delta x, \frac{d(x + \delta x)}{dt}) \\)
 
 \begin{equation*}
-  \delta S = \int_A^B \left( \frac{\partial L}{\partial x} \delta x + \frac{\partial L}{\partial \frac{dx}{dt}} \frac{d(\delta x)}{dt} \right) dt 
+  \delta S = \int_A^B \left( \frac{\partial L}{\partial x} \delta x + \frac{\partial L}{\partial \frac{dx}{dt}} \frac{d(\delta x)}{dt} \right) dt
 \end{equation*}
+
+We use integration by parts to get rid of the derivative \\( \frac{d}{dt} \\) off the path variation 
+
+\begin{equation*}
+  \delta S = \int_A^B \left( \frac{\partial L}{\partial x} \delta x - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx}{dt}} \delta x \right) dt + \left( \frac{\partial L}{\partial \frac{dx}{dt}} \delta x \right) \rvert_A^B
+\end{equation*}
+
+Since we keep the endpoints of the path stationary the last terms are equal to zero:
+
+\begin{equation*}
+  \delta S = \int_A^B \left( \frac{\partial L}{\partial x} \delta x - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx}{dt}} \delta x \right) dt =
+  \int_A^B \left( \frac{\partial L}{\partial x} - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx}{dt}}  \right) \delta x  dt
+\end{equation*}
+
+Equating this to zero we get
+
+\begin{equation*}
+ \int_A^B \left( \frac{\partial L}{\partial x} - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx}{dt}}  \right) \delta x dt = 0
+\end{equation*}
+
+Which holds true when the path satisfies the expression under the integral
+
+\begin{equation*}
+  \frac{\partial L}{\partial x} - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx}{dt} = 0
+\end{equation*}
+
+Which is the Euler-Lagrange equation!
+
+You can find a more detailed derivation [here](https://mathworld.wolfram.com/Euler-LagrangeDifferentialEquation.html) [4]
 
 </details>
 
