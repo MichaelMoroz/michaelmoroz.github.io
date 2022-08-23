@@ -314,17 +314,17 @@ float Hamiltonian(vec4 x, vec4 p)
 
 Surprisingly enough thats it, GLSL already has a matrix inverse function `inverse()`, on top of it the Hamiltonian is just the dot product(in GLSL sense) of g_inv*p and p, which are the contravariant and covariant momentum vectors respectively. 
 
-After this we need to compute the gradient of the Hamiltonian. We can do this by using a forward numerical difference in all 4 spacial directions, using some small value `eps`:
+After this we need to compute the 4D gradient of the Hamiltonian. We can do this by using a forward numerical difference in all 4 spacial directions, using some small value `eps`:
 
 ```glsl
 
-float HamiltonianGradient(vec4 x, vec4 p)
+vec4 HamiltonianGradient(vec4 x, vec4 p)
 {
   const float eps = 0.001;
-  return (vec4(Hamiltonian(x + vec4(eps,0,0,0)),
-               Hamiltonian(x + vec4(0,eps,0,0)),
-               Hamiltonian(x + vec4(0,0,eps,0)),
-               Hamiltonian(x + vec4(0,0,0,eps))) - Hamiltonian(x,p))/eps;
+  return (vec4(Hamiltonian(x + vec4(eps,0,0,0), p),
+               Hamiltonian(x + vec4(0,eps,0,0), p),
+               Hamiltonian(x + vec4(0,0,eps,0), p),
+               Hamiltonian(x + vec4(0,0,0,eps), p)) - Hamiltonian(x,p))/eps;
 }
 
 ```
