@@ -59,6 +59,7 @@ For a flat space-time like space we actually get something similar but with the 
 
 \begin{equation}
  ds^2 = - dx_0^2 + dx_1^2 + dx_2^2 + dx_3^2 
+ \label{flat}
 \end{equation}
 
 Here I used the \\( (- + + +) \\) signature, but signs can actually be flipped without changing the geodesics, and in some cases, like for particle physics, it makes more sense to use the opposite \\( (+ - - -) \\) signature.
@@ -230,6 +231,7 @@ And for our case the momentum would be the following, which we already computed 
 
 \begin{equation}
  p_i = 2 g_{i j} \frac{dx^j}{dt} 
+ \label{momentum}
 \end{equation}
 
 To get the "time" derivatives you simply need to multiply both sides by the metric tensor inverse:
@@ -358,7 +360,53 @@ vec4 IntegrationStep(inout vec4 x, inout vec4 p)
 
 You might ask, "wait, that's it?", and ideed that is all you need to integrate the geodesic. Of course it is quite slow since we do a whopping 6 matrix inverse evaluations, which can be optimized down to 1 actually, by replacing most Hamiltonians with Lagrangians which dont have inverses, since they are equal. Even better is to have the metric inverse already computed analytically, but its not possible for every metric, especially for an implicitly defined one.
 
+There is of course the last problem, while initializing the space-time position is easy, how do we initialize the value of the momentum vector `p` when starting to trace?
+
+Before tracing the geodesic you can use the equation \eqref{momentum}
+
+```glsl
+
+p = Metric(x) * dxdt;
+
+```
 ---
+
+But what is dxdt? It's nothing more than the 4D direction the ray moves inside space time. There are actually 3 categories the directions can fall into:
+* Time-like, when \\( A < 0 \\)
+* Null, when \\( A = 0 \\)
+* Space-like, when \\( A > 0 \\)
+
+Where \\(A\\) is
+\begin{equation}
+  A = g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} 
+\end{equation}
+
+or in GLSL `A = dot(Metric(x) * dxdt, dxdt)`
+
+When simulating how light travels we just want null directions, which lead to null geodesic solutions. On the other hand if you want to model an object moving slower than light you need a time-like geodesic. And space-like geodesics for tachionic stuff, which doesn't happen in real life, so we ignore it.
+
+So assuming a flat space metric \eqref{flat} and some 3D direction in space our p for a light ray would be
+
+```glsl
+
+vec4 GetNullMomentum(vec3 dir)
+{
+  return Metric(x) * vec4(1.0, normalize(dir));
+}
+
+```
+
+And the inverse of this operation
+
+```glsl
+
+vec3 GetDirection(vec4 p)
+{
+  vec4 dxdt = inverse(Metric(x)) * p;
+  return normalize(dxdt.yzw);
+}
+
+```
 
 ### References 
 * [1] [Einstein notation](https://en.wikipedia.org/wiki/Einstein_notation)
