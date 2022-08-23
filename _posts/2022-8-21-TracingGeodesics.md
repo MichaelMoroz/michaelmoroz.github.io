@@ -163,7 +163,7 @@ You can find a more detailed derivation [here](https://mathworld.wolfram.com/Eul
 
 ---
 
-Lets derive the Euler-Lagrange equationsfor our geodesic Lagrangian (there is an equation for each coordinate \( x^i \) ):
+Lets derive the Euler-Lagrange equations for our geodesic Lagrangian (there is an equation for each coordinate \( x^i \) ):
 
 \begin{equation}
  \frac{\partial L}{\partial \frac{dx^i}{dt}} = 
@@ -271,6 +271,64 @@ And this is all we need to write a numerical geodesic integrator!
 
 You might have noticed that in the final Hamilton's equations of motion I didn't write out \\( \frac{\partial H}{\partial x^i} \\), this is actually important! We want to keep the derivative of the Hamiltonian as is, because then instead of computing the 64 derivatives of the metric tensor, we only need 4 to find the Hamiltonian gradient. This is the main simplification of the geodesic tracing algorithm.
 
+Here we will use the GLSL shading language, since it has variables and functions which map quite well to the mathematical operations we will perform here.
+
+First of all we need a function that evaluates the metric tensor at a 4d point in space and time. Let's use the Alcubierre warp drive metric as an example, since it is quite simple.
+
+```glsl
+
+mat4 Metric(vec4 x)
+{
+  //Alcubierre metric  
+  const float R = 1.0;
+  const float sigma = 35.0; 
+  const float v = 1.1;
+
+  float x = v*x.x;
+  float r = sqrt(sqr(x.y - x) + x.z*x.z + x.w*x.w);
+  float f = 0.5*(tanh(sigma*(r + R)) - tanh(sigma*(r - R)))/tanh(sigma*R);
+  float gtt = v*v*f*f - 1.0;
+  float gxt = -v*f;
+  
+  return mat4(gtt, gxt,  0,  0,
+              gxt,   1,  0,  0,
+                0,   0,  1,  0,
+                0,   0,  0,  1);
+}
+
+```
+
+In our case x is a 4D vector representing position. The first component `x.x` or `x[0]` being time. As an output we get a 4 by 4 matrix represented by `mat4` in GLSL. 
+
+Then we need to write down the Hamiltonian. The Hamiltonian is a function that takes 2 things, the position in space time, and the 4d momentum vector, and outputs a scalar.
+
+```glsl
+
+float Hamiltonian(vec4 x, vec4 p)
+{
+  mat4 g_inv = inverse(Metric(x));
+  return dot(g_inv*p,p);
+}
+
+```
+
+Surprisingly enough thats it, GLSL already has a matrix inverse function `inverse()`, on top of it the Hamiltonian is just the dot product(in GLSL sense) of g_inv*p and p, which are the contravariant and covariant momentum vectors respectively. 
+
+After this we need to compute the gradient of the Hamiltonian. We can do this by using a forward numerical difference in all 4 spacial directions, using some small value eps:
+
+```glsl
+
+float HamiltonianGradient(vec4 x, vec4 p)
+{
+  const float eps = 0.001;
+  return (vec4(Hamiltonian(x + vec4(eps,0,0,0)),
+               Hamiltonian(x + vec4(0,eps,0,0)),
+               Hamiltonian(x + vec4(0,0,eps,0)),
+               Hamiltonian(x + vec4(0,0,0,eps))) - Hamiltonian(x,p))/eps;
+}
+
+```
+
 ---
 
 ### References 
@@ -280,4 +338,5 @@ You might have noticed that in the final Hamilton's equations of motion I didn't
 * [4] [Euler-Lagrange equations derivation](https://mathworld.wolfram.com/Euler-LagrangeDifferentialEquation.html)
 * [5] [Hamiltonian equations derivation](https://en.wikipedia.org/wiki/Hamiltonian_mechanics#Deriving_Hamilton's_equations)
 * [6] [Legendre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/)
+* [7] [Alcubierre metric](https://en.wikipedia.org/wiki/Alcubierre_drive)
 
