@@ -152,7 +152,7 @@ Equating this to zero we get
 Which holds true when the path satisfies the expression under the integral
 
 \begin{equation*}
-  \frac{\partial L}{\partial x} - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx}{dt} = 0
+  \frac{\partial L}{\partial x} - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx}{dt}} = 0
 \end{equation*}
 
 Which is the Euler-Lagrange equation!
