@@ -12,7 +12,7 @@ The main ingredient of any GR render is figuring out how the rays of light move 
 - [Mathematical description of shortest path](#mathematical-description-of-shortest-path)
 - [Lagrangian description of a geodesic](#lagrangian-description-of-a-geodesic)
 - [Hamiltonian description of a geodesic](#hamiltonian-description-of-a-geodesic)
-- [Writing this as code](#writing-this-as-code)
+- [Writing a Hamiltonian geodesic tracer in GLSL](#writing-a-hamiltonian-geodesic-tracer-in-glsl)
 - [References](#references)
   
 ---
@@ -112,9 +112,25 @@ You can find a derivation of those, for example, [here](https://mathworld.wolfra
 <details>
   <summary>Euler-Lagrange equations derivation</summary>
 
-\begin{equation}
- \frac{\partial L}{\partial x^i} - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx^i}{dt}} = 0 
-\end{equation}
+In general the Action can be written like
+
+\begin{equation*}
+  S = \int_A^B  L(t, x(t), \frac{dx(t)}{dt}) dt 
+\end{equation*}
+
+Where the Lagrangian is a function of the path parameter("clock"), the path itself, and the derivative of the path with respect to the path parameter.
+
+To find the minimizing path(or more generally, stationary path) of a functional we need to equate its variation to 0
+
+\begin{equation*}
+  \delta S = 0
+\end{equation*}
+
+Where the variation of the action is found by adding a small variation to the path \\( L(t, x + \delta x, \frac{d(x + \delta x)}{dt}\\)
+
+\begin{equation*}
+  \delta S = \int_A^B \left( \frac{\partial L}{\partial x} \delta x + \frac{\partial L}{\partial \frac{dx}{dt}} \frac{d(\delta x)}{dt} \right) dt 
+\end{equation*}
 
 </details>
 
@@ -218,11 +234,11 @@ While the equations of motion will simply be:
  \frac{dx^i}{dt} = \frac{1}{2} g^{i j} p_j 
 \end{equation}
 
-In fact this is all we need to write a numerical geodesic integrator! 
+And this is all we need to write a numerical geodesic integrator! 
 
 ---
 
-### Writing this as code
+### Writing a Hamiltonian geodesic tracer in GLSL
 
 You might have noticed that in the final Hamilton's equations of motion I didn't write out \\( \frac{\partial H}{\partial x^i} \\), this is actually important! We want to keep the derivative of the Hamiltonian as is, because then instead of computing the 64 derivatives of the metric tensor, we only need 4 to find the Hamiltonian gradient. This is the main simplification of the geodesic tracing algorithm.
 
