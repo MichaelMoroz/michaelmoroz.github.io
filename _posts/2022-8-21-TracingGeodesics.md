@@ -420,7 +420,7 @@ void TraceGeodesic(inout vec3 pos, inout vec3 dir, inout float time)
   for(int i = 0; i < steps; i++)
   {
     IntegrationStep(x, p);
-    //you can add a stop condition here when x is below the even horizon for example
+    //you can add a stop condition here when x is below the event horizon for example
   }
 
   pos = x.yzw;
@@ -436,9 +436,9 @@ Also here is a shadertoy example of this algorithm in action together with some 
 
 ---
 
-
 ### Conclusions
 
+---
 
 ### References 
 * [1] [Einstein notation](https://en.wikipedia.org/wiki/Einstein_notation)
