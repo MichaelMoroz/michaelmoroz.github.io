@@ -480,7 +480,7 @@ mat4 Metric(vec4 x)
 
 This is, of course, not the limit for optimization. The main other optimization is computing analytical inverses of the metric. For a large class of metrics you can use the [Sherman–Morrison formula](https://en.wikipedia.org/wiki/Sherman%E2%80%93Morrison_formula) [9]
 
-# Some useful things to keep in mind
+#### Some useful things to keep in mind
 
 Since we used numerical finite differences, the results can actually depend quite a lot on the relative values of the float numbers. For example, the accuracy of the numerical derivatives is a lot lower far from the coordinate system center, so you'd need to vary the size of `eps` to avoid excessive numerical noise. Also, metrics quite often have numerical singularities which you should avoid, unless you want to get NaN results. 
 
