@@ -447,7 +447,7 @@ Essentially this is just a ray marching algorithm where the direction of the ray
 
 You can check out this Shadertoy implementation to see some of the optimizations, like variable timestep, replacing Hamiltonians with Lagrangians, using a symmetric matrix inversion function (a bit faster), reusing some of the computed values (restart if the Shadertoy is black):
 
-<center><iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/NtSGWG?gui=true&t=10&paused=false&muted=false" allowfullscreen></iframe></center>
+<center><iframe width="800" height="400" frameborder="0" src="https://www.shadertoy.com/embed/NtSGWG?gui=true&t=10&paused=false&muted=false" allowfullscreen></iframe></center>
 
 The shader above implements both the Alcubierre metric, and the [Kerr–Newman metric in Kerr-Schild coordinates](https://en.wikipedia.org/wiki/Kerr%E2%80%93Newman_metric#Kerr%E2%80%93Schild_coordinates) [8] (essentially Cartesian coordinates).
 
@@ -504,7 +504,7 @@ Fast volumetric ray tracing with geodesics is quite difficult, and we needed to 
 
 Combining this with SDF's is somewhat easier, you need to vary the geodesic step to be the min() between the current step size and the SDF. Using this I've also tried to make a really simple path tracer in Unity with a Kerr black hole, naturally it was quite slow.
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/_s01oUxTG5I" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+<center><iframe width="800" height="400" src="https://www.youtube.com/embed/_s01oUxTG5I" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></center>
 
 The project is [here](https://github.com/The-Order-of-the-Simulation/SpaceTimePathTracer), but don't expect very readable code, this was mostly intended as an experiment.
 
