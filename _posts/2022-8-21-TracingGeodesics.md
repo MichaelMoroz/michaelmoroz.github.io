@@ -489,6 +489,8 @@ There is also a different method that can be used to compute derivatives numeric
 
 And finally you could always derive the equations analytically, while this is the most annoying method it is usually the fastest performance-wise. A compromise solution would be derive the equations automatically, this approach is used by [geodesic_raytracing](https://github.com/20k/geodesic_raytracing) made by [James Berrow](https://twitter.com/berrow_james) (you should follow him on Twitter, he has a lot of cool stuff on this topic).
 
+Figuring out if the ray has fallen inside the event horizon is actually not trivial, and while you could just set the color to 0 if the ray is below the event horizon surface, this is incorrect when viewing things from inside the black hole. Tracing the rays should also be done backwards in time, since we trace the rays from the camera, not to the camera, this has a noticeble effect on the resulting render, if not done, and also results in completely dark renderes inside of black holes, even though light does exist under the event horizon, and can reach from the outside.
+
 ---
 
 ## Conclusions
