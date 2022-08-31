@@ -489,7 +489,7 @@ There is also a different method that can be used to compute derivatives numeric
 
 And finally you could always derive the equations analytically, while this is the most annoying method it is usually the fastest performance-wise. A compromise solution would be derive the equations automatically, this approach is used by [geodesic_raytracing](https://github.com/20k/geodesic_raytracing) made by [James Berrow](https://twitter.com/berrow_james) (you should follow him on Twitter, he has a lot of cool stuff on this topic).
 
-Figuring out if the ray has fallen inside the event horizon is actually not trivial, and while you could just set the color to 0 if the ray is below the event horizon surface, this is incorrect when viewing things from inside the black hole. Tracing the rays should also be done backwards in time, since we trace the rays from the camera, not to the camera, this has a noticeble effect on the resulting render, if not done, and also results in completely dark renderes inside of black holes, even though light does exist under the event horizon, and can reach from the outside.
+Figuring out if the ray has fallen inside the event horizon is actually not trivial, and there is no universal method, and while you could just set the color to 0 if the ray is below the event horizon surface, this is incorrect when viewing things from inside the black hole. Tracing the rays should also be done backwards in time, since we trace the rays from the camera, not to the camera, this has a noticeble effect on the resulting render, if not done this also results in completely dark renderes inside of black holes, even though light does exist under the event horizon, and can reach from the outside.
 
 ---
 
@@ -504,6 +504,8 @@ Using this ray tracing algorithm, you can basically render whatever you want ins
 Fast volumetric ray tracing with geodesics is quite difficult, and we needed to separate the ray marching loop into 2 loops, main loop being the geodesic steps, and the second loop being the volumetric substeps. Since we also use blue noise, it was necessary to keep the steps uniform along the geodesic, otherwise there would be clear artifacts in the volume, which required a few tricks with having a variable number of substeps per geodesic step.
 
 Combining this with SDF's is somewhat easier, you need to vary the geodesic step to be the min() between the current step size and the SDF. Using this I've also tried to make a really simple path tracer in Unity with a Kerr black hole, naturally it was quite slow.
+
+(note that rendering **moving** objects is waaay harder, and requires either to do have a space time SDF, or some insane acceleration structure for triangles, on top of that the entire history of the scene's past needs to be kept in memeory, the only simple cases is when the moving objects are an analytical function you can sample in space and time, like the volumetric accretion disk in Space Engine)
 
 <center><iframe width="900" height="500" src="https://www.youtube.com/embed/_s01oUxTG5I" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></center>
 
