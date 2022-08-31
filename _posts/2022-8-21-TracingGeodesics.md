@@ -4,9 +4,10 @@ title: Visualizing General Relativity
 image: SpaceEngineBH.jpg
 ---
 
-When dealing with renders of things like warp drives and black holes we usually just expect to see a simple approximation or an artist rendition, usually just assuming that the math required to pull off something accurate would require someone with at least a PhD in Mathematical Physics, which in most cases is somewhat true, but not necessarily. In this blog post I'll try to explain a way to do actually accurate visualizations within a 100 or so lines of code, for basically any kind of space time for which you can write its metric as code. The detailed mathematical derivation of this approach might be somewhat math heavy though.
+When dealing with renders of things like warp drives and black holes we usually just expect to see a simple approximation or an artist rendition, usually assuming the math required to pull off something accurate would require someone with at least a PhD in Mathematical Physics, which in most cases is somewhat true, but not necessarily. In this blog post I'll try to explain a way to do quite accurate visualizations within a 100 or so lines of code, for basically any kind of space time for which you can write its metric as code. The detailed mathematical derivation of this approach might be somewhat math heavy though.
 
-The main ingredient of any GR render is figuring out how the rays of light move around. Knowing how light moves we can trace rays from the camera into the scene as see where the light came from. So to render a basic scene without objects we simply trace a ray for each pixel and assignt the color of the pixel to the color of the skybox in the direction in which the ray ends up pointing to. 
+The main ingredient of any GR render is figuring out how the rays of light move around. Knowing how light moves we can trace rays from the camera into the scene as see where the light came from. So, to render a basic scene without objects we simply trace a ray for each pixel and assign the color of the pixel to the color of the skybox in the direction in which the ray ends up pointing to.
+
 
 - [What are geodesics?](#what-are-geodesics)
 - [Mathematical description of shortest path](#mathematical-description-of-shortest-path)
@@ -21,7 +22,7 @@ The main ingredient of any GR render is figuring out how the rays of light move 
 ### What are geodesics?
 So how exactly do we trace rays in curves space? Any object inside a curved space follows something called a geodesic.
 
-A geodesic is essentially just a fancy word for path of shortest length between 2 points inside a space, and actually there could be multiple of such paths, which are locally minimal(in the sense that you cant nudge the path to make it shorter, globally there might be a shorter path). It should be noted, however, that in Minkowski space-time the definition is actually a bit more complicated, because of negative distances. But instead of paths between 2 points we're only interested in finding how a ray moves. So essentially we have a position in space and a direction of movement, and we would like to know how the direction of movement changes to minimize the lengthof the path the ray takes.
+A geodesic is just a fancy word for a path of shortest length between 2 points inside a space, and there could be multiple of such paths, which are locally minimal (in the sense that you can't nudge the path to make it shorter, globally there might be a shorter path). It should be noted, however, that in Minkowski space-time the definition is a bit more complicated, because of the imaginary distances (when \\( ds^2 < 0 \\)),. But instead of paths between 2 points we're only interested in finding how a ray moves. So essentially, we have a position in space and a direction of movement, and we would like to know how the direction of movement changes to minimize the length of the path the ray takes.
 
 ---
 
@@ -30,9 +31,10 @@ A geodesic is essentially just a fancy word for path of shortest length between 
 
 Mathematically speaking we have some coordinate system, a path, and a way to compute distances between 2 points. 
 
-A coordinate system being a set of several numbers labeling each point in the space. A path is a function that takes in the path parameter and outputs a coordinate, in GR the path parameter is usually proper time(like a clock moving with the object), but it can be anything really. And the way to compute distances is called a metric, and it's the main source of scary math here.
+A coordinate system being a set of several numbers labeling each point in the space. A path is a function that takes in the path parameter and outputs a coordinate, in GR the path parameter is usually proper time (like a clock moving with the object), but it can be anything really. And the way to compute distances is called a metric, and it's the main source of scary math here.
 
 In physics, or more generally differential geometry, a metric is defined as an integral("sum") of something called the metric tensor. A metric tensor is a bilinear form \\( g(a, b) \\), it essentially maps pairs of vectors to real numbers, and is a generalization of dot product for curved spaces. So using a metric tensor we can find the length of a vector in space, and distances \\( ds \\) between infinitely close points in space.
+
  
 \begin{equation}
    ds^2 = g(dx, dx)
@@ -56,7 +58,7 @@ Here we can actually see that for some simple choices of \\( g_{\mu \nu} \\) we 
  ds^2 = dx_1^2 + dx_2^2 + dx_3^2 
 \end{equation}
 
-For a flat space-time like space we actually get something similar but with the exception that the time coordinate component is with a negative sign.
+For a flat space-time like space, we get something similar but with the exception that the time coordinate component is with a negative sign.
 
 \begin{equation}
  ds^2 = - dx_0^2 + dx_1^2 + dx_2^2 + dx_3^2 
@@ -73,12 +75,13 @@ Going back to the main question of computing distances, to compute the length be
 
 Where \\( \frac{dx^i}{dt} \\) is simply how fast the coordinate x changes with respect to the path parameter ("clock"), in some sense can be interpreted as the velocity. 
 
-Now our main question is how do we minimize the path length? Here is where we introduce a thing called calculus of variations, which is rouhtly speaking a way to find how a functional(distance) changes by varying its input function(path). Such derivatives has similar properties to normal function derivatives. And in fact, similarly to calculus, to find the extremum of a function(min, max or stationary point), we simply need to equate the variation to 0.
+Now our main question is how do we minimize the path length? Here is where we introduce a thing called calculus of variations, which is roughly speaking a way to find how a functional(distance) changes by varying its input function(path). Such derivatives have similar properties to normal function derivatives. And in fact, similarly to calculus, to find the extremum of a function (min, max or stationary point), we simply need to equate the variation to 0.
+
 
 ---
 
 ### Lagrangian description of a geodesic
-There is an entire branch of physics related to variational principles, and basically any kind of physical system has some kind of value it likes to minimize(or more generally make unchanging under small variations of path). That value is called action, and the function under the integral is called the Lagrangian function of the system. The branch of physics studying Lagrangians of systems is called Lagrangian mechanics. 
+There is an entire branch of physics related to variational principles, and basically any kind of physical system has a value it likes to minimize (or more generally make unchanging under small variations of path). That value is called action, and the function under the integral is called the Lagrangian function of the system. The branch of physics studying Lagrangian functions of systems is called Lagrangian mechanics. 
 
 In our case the Lagrangian can be written like this:
 
@@ -86,7 +89,7 @@ In our case the Lagrangian can be written like this:
  L = \sqrt{g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt}}
 \end{equation}
 
-Turns out we don't actually need the square root for the minimum of the functional to be a geodesic, we can simply use this as our geodesic Lagrangian:
+Turns out we don't need the square root for the minimum of the functional to be a geodesic, we can simply use this as our geodesic Lagrangian:
 
 \begin{equation}
  L = g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} 
@@ -94,13 +97,13 @@ Turns out we don't actually need the square root for the minimum of the function
 
 The proof of this you can find [here](https://physics.stackexchange.com/questions/149082/geodesic-equation-from-variation-is-the-squared-lagrangian-equivalent) [2]. The only difference such simplification makes is that the parametrization of the path might be different, but the path itself will be the same.
 
-Also we want this with a 1/2 factor, to simplify the equations down the line.
+Also, we want this with a 1/2 factor, to simplify the equations down the line.
 
 \begin{equation}
  L = \frac{1}{2} g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} 
 \end{equation}
 
-So our goal right now is to minimize this functional:
+So, our goal right now is to minimize this functional:
 
 \begin{equation}
  S = \int_A^B \frac{1}{2} g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} dt 
@@ -113,12 +116,13 @@ In general the minimum of a functional like this can be found by applying the [E
   \label{el}
 \end{equation}
 
+
 ---
 
 <details>
 <summary>Euler-Lagrange equation derivation</summary>
 
-In general the Action can be written like
+In general, the Action can be written like
 
 \begin{equation*}
   S = \int_A^B  L(t, x(t), \frac{dx(t)}{dt}) dt 
@@ -126,7 +130,7 @@ In general the Action can be written like
 
 Where the Lagrangian is a function of the path parameter("clock"), the path itself, and the derivative of the path with respect to the path parameter.
 
-To find the minimizing path(or more generally, stationary path) of a functional we need to equate the variation of the action to 0
+To find the minimizing path (or more generally, stationary path) of a functional we need to equate the variation of the action to 0
 
 \begin{equation*}
   \delta S = 0
@@ -165,13 +169,14 @@ Which holds true when the path satisfies the expression under the integral
 
 Which is the Euler-Lagrange equation!
 
+
 </details>
 
 You can find a more detailed derivation [here](https://mathworld.wolfram.com/Euler-LagrangeDifferentialEquation.html) [4]
 
 ---
 
-Lets derive the Euler-Lagrange equations for our geodesic Lagrangian (there is an equation for each coordinate \\( x^i \\) ):
+Let's derive the Euler-Lagrange equations for our geodesic Lagrangian (keep in mind that there is an equation for each coordinate \\( x^i \\) ):
 
 \begin{equation}
  \frac{\partial L}{\partial \frac{dx^i}{dt}} = 
@@ -180,7 +185,7 @@ Lets derive the Euler-Lagrange equations for our geodesic Lagrangian (there is a
     g_{i \nu} \frac{dx^\nu}{dt} 
 \end{equation}
 
-Then we take the derivative with respect to to the path parameter:
+Then we take the derivative with respect to the path parameter:
 
 \begin{equation}
  \frac{d}{dt} \left( g_{i \nu} \frac{dx^\nu}{dt} \right) =   \frac{d g_{i \nu} }{dt}  \frac{dx^\nu}{dt} + g_{i \nu} \frac{d^2x^\nu}{dt^2} = 
@@ -207,7 +212,8 @@ Multiplying by the metric tensor inverse \\( - g^{i \nu} \\) we get:
  \frac{d^2x^i}{dt^2} +  g^{i \nu} \left( \frac{d g_{i \nu} }{dx^\mu} - \frac{1}{2} \frac{d g_{\mu \nu} }{dx^i}  \right) \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} = 0 
 \end{equation}
 
-And that's our final system of equations for a geodesic, we could of course also substitute the Christoffel symbols here, but for our application there is no difference. Of course we could just use these equations for tracing geodesic rays and call it a day, but unfortunately this would require computing a whole lot of derivatives (in 4d space time it's 64 of them to be specific), either manually, or by using numerical differentiation. Thankfully there is a way to avoid this, and in fact simplify the entire algorithm! (at a slight performance cost)
+And that's our final system of equations for a geodesic, we could of course also substitute the Christoffel symbols here, but for our application there is no difference. Of course, we could just use these equations for tracing geodesic rays and call it a day, but unfortunately this would require computing a whole lot of derivatives (in 4d space time it's 64 of them to be specific), either manually, or by using numerical differentiation. Thankfully there is a way to avoid this, and in fact simplify the entire algorithm! (At a slight performance cost)
+
 
 ---
 
@@ -256,7 +262,7 @@ And the Hamiltonian itself:
 
 Turns out that for this simple choice of a geodesic Lagrangian, the Hamiltonian is equal to the Lagrangian!
 
-Also we want to know the Hamiltonian as a function of the generalized momentum by substituting \eqref{dxdt} into the Hamiltonian equation:
+Also, we want to know the Hamiltonian as a function of the generalized momentum by substituting \eqref{dxdt} into the Hamiltonian equation:
 
 \begin{equation}
  H = \frac{1}{2} g_{i j} \frac{dx^i}{dt} \frac{dx^j}{dt} = \frac{1}{2} g^{i j} p_i p_j 
@@ -275,7 +281,8 @@ While the equations of motion will simply be:
  \label{eqmotion2}
 \end{equation}
 
-And this is all we need to write a numerical geodesic integrator! 
+This is all we need to write a numerical geodesic integrator!
+
 
 ---
 
@@ -285,7 +292,7 @@ You might have noticed that in the final Hamilton's equations of motion I didn't
 
 Here we will use the GLSL shading language, since it has variables and functions which map quite well to the mathematical operations we will perform here. On top of that we can easily then make a real time GR visualization shader. 
 
-First of all we need a function that evaluates the metric tensor at a 4d point in space and time. Let's use the [Alcubierre warp drive](https://en.wikipedia.org/wiki/Alcubierre_drive) [7] metric as an example, since it is quite simple.
+First of all, we need a function that evaluates the metric tensor at a 4d point in space and time. Let's use the [Alcubierre warp drive](https://en.wikipedia.org/wiki/Alcubierre_drive) [7] metric as an example, since it is quite simple.
 
 ```glsl
 
@@ -352,7 +359,7 @@ vec4 HamiltonianGradient(vec4 x, vec4 p)
 
 ```
 
-Now that we have the Hamiltonian gradient we can finally write down the equation of motion \eqref{eqmotion1} \eqref{eqmotion2} integration code
+Now that we have the Hamiltonian gradient, we can finally write down the equation of motion \eqref{eqmotion1} \eqref{eqmotion2} integration code
 
 ```glsl
 
@@ -365,18 +372,18 @@ vec4 IntegrationStep(inout vec4 x, inout vec4 p)
 
 ```
 
-You might ask, "wait, that's it?", and ideed that is all you need to integrate the geodesic. Of course it is quite slow since we do a whopping 6 matrix inverse evaluations, which can be optimized down to 1 actually, by replacing most Hamiltonians with Lagrangians which dont have inverses, since they are equal. Even better is to have the metric inverse already computed analytically, but its not possible for every metric, especially for an implicitly defined one.
+You might ask, "wait, that's it?", and indeed that is all you need to integrate the geodesic. Of course, it is quite slow since we do a whopping 6 matrix inverse evaluations, which can be optimized down to 1, by replacing most Hamiltonians with Lagrangians which don’t have inverses, since they are equal. Even better is to have the metric inverse already computed analytically, but it’s not possible for every metric, especially for an implicitly defined one.
 
 There is of course the last problem, while initializing the space-time position is easy, how do we initialize the value of the momentum vector `p` when starting to trace?
 
-Before tracing the geodesic you can use the equation \eqref{momentum}
+Before tracing the geodesic, you can use the equation \eqref{momentum}
 
 ```glsl
 
 p = Metric(x) * dxdt;
 
 ```
-But what is dxdt? It's nothing more than the 4D direction the ray moves inside space time. There are actually 3 categories the directions can fall into:
+But what is dxdt? It's nothing more than the 4D direction the ray moves inside space time. There are 3 categories the directions can fall into:
 * Time-like, when \\( A < 0 \\)
 * Null, when \\( A = 0 \\)
 * Space-like, when \\( A > 0 \\)
@@ -388,9 +395,9 @@ Where \\(A\\) is
 
 or in GLSL `A = dot(Metric(x) * dxdt, dxdt)`
 
-When simulating how light travels we just want null directions, which lead to null geodesic solutions. On the other hand if you want to model an object moving slower than light you need a time-like geodesic. And space-like geodesics for tachionic stuff, which doesn't happen in real life, so we ignore it.
+When simulating how light travels we just want null directions, which lead to null geodesic solutions. On the other hand, if you want to model an object moving slower than light you need a time-like geodesic. And space-like geodesics for tachyonic stuff, which doesn't happen in real life, so we ignore it.
 
-So assuming a flat space metric \eqref{flat} and some 3D direction in space our p for a light ray would be
+So, assuming a flat space metric \eqref{flat} and some 3D direction in space our p for a light ray would be
 
 ```glsl
 
@@ -413,7 +420,7 @@ vec3 GetDirection(vec4 p)
 
 ```
 
-So in the end the final simple algorithm will look like this:
+So, in the end the final simple algorithm will look like this:
 
 ```glsl
 
@@ -436,13 +443,70 @@ void TraceGeodesic(inout vec3 pos, inout vec3 dir, inout float time)
 
 ```
 
-Also here is a shadertoy example of this algorithm in action together with some optimizations and Kerr-Newman metric. (Restart if black)
+Essentially this is just a ray marching algorithm where the direction of the ray changes every step. In this specific case the size of the step also changes, which can be avoided by normalizing the momentum `p = normalize(p)`. This only changes the step length, and doesn't change the geodesic path, i.e., it works just like a dynamic reparameterization of the path. The time step of the integration can also be varied depending on the metric used. For example, in the case of black holes I change the time step proportionally to the distance to the event horizon, so that the accuracy of the geodesic is roughly proportional to the curvature of space. This is an important optimization to get accurate results, while keeping the computational cost relatively small.
+
+You can check out this Shadertoy implementation to see some of the optimizations, like variable timestep, replacing Hamiltonians with Lagrangians, using a symmetric matrix inversion function (a bit faster), reusing some of the computed values (restart if the Shadertoy is black):
 
 <center><iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/NtSGWG?gui=true&t=10&paused=false&muted=false" allowfullscreen></iframe></center>
+
+The shader above implements both the Alcubierre metric, and the [Kerr–Newman metric in Kerr-Schild coordinates](https://en.wikipedia.org/wiki/Kerr%E2%80%93Newman_metric#Kerr%E2%80%93Schild_coordinates) [8] (essentially Cartesian coordinates).
+
+```glsl
+
+mat4 diag(vec4 a)
+{
+    return mat4(a.x,0,0,0,
+                0,a.y,0,0,
+                0,0,a.z,0,
+                0,0,0,a.w);
+}
+
+mat4 Metric(vec4 x)
+{
+  //Kerr-Newman metric in Kerr-Schild coordinates 
+  const float a = 0.8;
+  const float m = 1.0;
+  const float Q = 0.0;
+  vec3 p = q.yzw;
+  float rho = dot(p,p) - a*a;
+  float r2 = 0.5*(rho + sqrt(rho*rho + 4.0*a*a*p.z*p.z));
+  float r = sqrt(r2);
+  vec4 k = vec4(1, (r*p.x + a*p.y)/(r2 + a*a), (r*p.y - a*p.x)/(r2 + a*a), p.z/r);
+  float f = r2*(2.0*m*r - Q*Q)/(r2*r2 + a*a*p.z*p.z);
+  return f*mat4(k.x*k, k.y*k, k.z*k, k.w*k)+diag(vec4(-1,1,1,1));    
+}
+
+```
+
+This is, of course, not the limit for optimization. The main other optimization is computing analytical inverses of the metric. For a large class of metrics you can use the [Sherman–Morrison formula](https://en.wikipedia.org/wiki/Sherman%E2%80%93Morrison_formula) [9]
+
+# Some useful things to keep in mind
+
+Since we used numerical finite differences, the results can actually depend quite a lot on the relative values of the float numbers. For example, the accuracy of the numerical derivatives is a lot lower far from the coordinate system center, so you'd need to vary the size of `eps` to avoid excessive numerical noise. Also, metrics quite often have numerical singularities which you should avoid, unless you want to get NaN results. 
+
+I usually avoid metrics in spherical coordinates due to their polar axis singularity, which has strong visual effects which are extremely hard to avoid even with a tiny varying timestep, although such metrics are usually mathematically simpler and allow for larger timesteps without breaking the look of the Black hole. For spherically symmetric metrics, like non-spinning black holes and wormholes there is a trick to avoid the polar singularity altogether! The thing about spherical symmetry is that the geodesic is always moving inside a 2d plane, which can be mapped to the equatorial plane of the coordinate system, basically reducing the 3d + 1 time problem to 2d + time. ([Scott Manley has a video explaining how he rendered wormholes](https://youtu.be/PVO8nvb1o2w), in there he used this trick + precomputing a lookup table to simplify the computation by a lot)
+
+There is also a different method that can be used to compute derivatives numerically, and way more accurately. Essentially it's forward automatic differentiation based on dual numbers, [there are some Shadertoy example which have used this approach](https://www.shadertoy.com/view/3tGcRt).
+
+And finally you could always derive the equations analytically, while this is the most annoying method it is usually the fastest performance-wise. A compromise solution would be derive the equations automatically, this approach is used by [geodesic_raytracing](https://github.com/20k/geodesic_raytracing) made by [James Berrow](https://twitter.com/berrow_james) (you should follow him on Twitter, he has a lot of cool stuff on this topic).
 
 ---
 
 ### Conclusions
+
+Using this ray tracing algorithm, you can basically render whatever you want inside any definable space-time. This algorithm was used to render different warped space-times inside of Space Engine, you can check out the blog posts about this:
+
+* [Kerr black holes](https://spaceengine.org/news/blog220705/) 
+* [Alcubierre warp fields and wormholes](https://spaceengine.org/news/blog220812/) 
+* [Volumetric accretion disks around a Kerr black hole](https://spaceengine.org/news/blog220705/) 
+
+Fast volumetric ray tracing with geodesics is quite difficult, and we needed to separate the ray marching loop into 2 loops, main loop being the geodesic steps, and the second loop beign the volumetric substeps. Since we also use blue noise, it was necessary to keep the steps uniform along the geodesic, otherwise there would be clear artifacts in the volume, which required a few tricks with having a variable number of substeps per geodesic step.
+
+Combining this with SDF's is somewhat easier, you need to vary the geodesic step to be the min() between the current step size and the SDF. Using this I've also tried to make a really simple path tracer in Unity with a Kerr black hole, naturally it was quite slow.
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/_s01oUxTG5I" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+The project is [here](https://github.com/The-Order-of-the-Simulation/SpaceTimePathTracer), but don't expect very readable code, this was mostly intended as an experiment.
 
 ---
 
@@ -454,4 +518,6 @@ Also here is a shadertoy example of this algorithm in action together with some 
 * [5] [Hamiltonian equations derivation](https://en.wikipedia.org/wiki/Hamiltonian_mechanics#Deriving_Hamilton's_equations)
 * [6] [Legendre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/)
 * [7] [Alcubierre metric](https://en.wikipedia.org/wiki/Alcubierre_drive)
-
+* [8] [Kerr–Newman metric in Kerr-Schild coordinates](https://en.wikipedia.org/wiki/Kerr%E2%80%93Newman_metric#Kerr%E2%80%93Schild_coordinates)
+* [9] [Sherman–Morrison formula](https://en.wikipedia.org/wiki/Sherman%E2%80%93Morrison_formula)
+* [10] [Space-time path tracer](https://github.com/The-Order-of-the-Simulation/SpaceTimePathTracer)
