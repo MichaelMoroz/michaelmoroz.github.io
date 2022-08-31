@@ -442,7 +442,7 @@ void TraceGeodesic(inout vec3 pos, inout vec3 dir, inout float time)
 
 ```
 
-Essentially this is just a ray marching algorithm where the direction of the ray changes every step. In this specific case the size of the step also changes, which can be avoided by normalizing the momentum `p = normalize(p)`. This only changes the step length, and doesn't change the geodesic path, i.e., it works just like a dynamic reparameterization of the path. The time step of the integration can also be varied depending on the metric used. For example, in the case of black holes I change the time step proportionally to the distance to the event horizon, so that the accuracy of the geodesic is roughly proportional to the curvature of space. This is an important optimization to get accurate results, while keeping the computational cost relatively small.
+Essentially this is just a 4D ray marching algorithm where the direction of the ray changes every step. In this specific case the size of the step also changes, which can be avoided by normalizing the momentum `p = normalize(p)`. This only changes the step length, and doesn't change the geodesic path, i.e., it works just like a dynamic reparameterization of the path. The time step of the integration can also be varied depending on the metric used. For example, in the case of black holes I change the time step proportionally to the distance to the event horizon, so that the accuracy of the geodesic is roughly proportional to the curvature of space. This is an important optimization to get accurate results, while keeping the computational cost relatively small.
 
 You can check out this Shadertoy implementation to see some of the optimizations, like variable timestep, replacing Hamiltonians with Lagrangians, using a symmetric matrix inversion function (a bit faster), reusing some of the computed values (restart if the Shadertoy is black):
 
@@ -484,6 +484,10 @@ This is, of course, not the limit for optimization. The main other optimization 
 Since we used numerical finite differences, the results can actually depend quite a lot on the relative values of the float numbers. For example, the accuracy of the numerical derivatives is a lot lower far from the coordinate system center, so you'd need to vary the size of `eps` to avoid excessive numerical noise. Also, metrics quite often have numerical singularities which you should avoid, unless you want to get NaN results. 
 
 I usually avoid metrics in spherical coordinates due to their polar axis singularity, which has strong visual effects which are extremely hard to avoid even with a tiny varying timestep, although such metrics are usually mathematically simpler and allow for larger timesteps without breaking the look of the Black hole. For spherically symmetric metrics, like non-spinning black holes and wormholes there is a trick to avoid the polar singularity altogether! The thing about spherical symmetry is that the geodesic is always moving inside a 2d plane, which can be mapped to the equatorial plane of the coordinate system, basically reducing the 3d + 1 time problem to 2d + time. ([Scott Manley has a video explaining how he rendered wormholes](https://youtu.be/PVO8nvb1o2w), in there he used this trick + precomputing a lookup table to simplify the computation by a lot)
+
+I've used the dimensionality reduction trick in my wormhole shadertoy:
+
+<center><iframe width="900" height="500" frameborder="0" src="https://www.shadertoy.com/embed/stByz1?gui=true&t=10&paused=true&muted=false" allowfullscreen></iframe></center>
 
 There is also a different method that can be used to compute derivatives numerically, and way more accurately. Essentially it's forward automatic differentiation based on dual numbers, [there are some Shadertoy example which have used this approach](https://www.shadertoy.com/view/3tGcRt).
 
