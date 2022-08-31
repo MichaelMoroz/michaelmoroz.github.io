@@ -495,23 +495,24 @@ Figuring out if the ray has fallen inside the event horizon is actually not triv
 
 ## Conclusions
 
+<center><iframe width="900" height="500" src="https://www.youtube.com/embed/mst0BoDTQdo" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></center>
+
 Using this ray tracing algorithm, you can basically render whatever you want inside any definable space-time. This algorithm was used to render different warped space-times inside of Space Engine, you can check out the blog posts about this:
 
 * [Kerr black holes](https://spaceengine.org/news/blog220705/) 
 * [Alcubierre warp fields and wormholes](https://spaceengine.org/news/blog220812/) 
 * [Volumetric accretion disks around a Kerr black hole](https://spaceengine.org/news/blog220705/) 
 
-<center><iframe width="900" height="500" src="https://www.youtube.com/embed/mst0BoDTQdo" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></center>
-
 Fast volumetric ray tracing with geodesics is quite difficult, and we needed to separate the ray marching loop into 2 loops, main loop being the geodesic steps, and the second loop being the volumetric substeps. Since we also use blue noise, it was necessary to keep the steps uniform along the geodesic, otherwise there would be clear artifacts in the volume, which required a few tricks with having a variable number of substeps per geodesic step.
 
 Combining this with SDF's is somewhat easier, you need to vary the geodesic step to be the min() between the current step size and the SDF. Using this I've also tried to make a really simple path tracer in Unity with a Kerr black hole, naturally it was quite slow.
 
-(note that rendering **moving** objects is waaay harder, and requires either to do have a space time SDF, or some insane acceleration structure for triangles, on top of that the entire history of the scene's past needs to be kept in memeory, the only simple cases is when the moving objects are an analytical function you can sample in space and time, like the volumetric accretion disk in Space Engine)
-
 <center><iframe width="900" height="500" src="https://www.youtube.com/embed/_s01oUxTG5I" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></center>
 
 The project is [here](https://github.com/The-Order-of-the-Simulation/SpaceTimePathTracer), but don't expect very readable code, this was mostly intended as an experiment.
+
+Note that rendering **moving** objects is waaay harder, and requires either to do have a space time SDF, or some insane acceleration structure for triangles, on top of that the entire history of the scene's past needs to be kept in memeory, the only simple cases is when the moving objects are an analytical function you can sample in space and time, like the volumetric accretion disk in Space Engine.
+
 
 ---
 
