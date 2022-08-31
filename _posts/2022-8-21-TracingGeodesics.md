@@ -8,7 +8,6 @@ When dealing with renders of things like warp drives and black holes we usually 
 
 The main ingredient of any GR render is figuring out how the rays of light move around. Knowing how light moves we can trace rays from the camera into the scene as see where the light came from. So, to render a basic scene without objects we simply trace a ray for each pixel and assign the color of the pixel to the color of the skybox in the direction in which the ray ends up pointing to.
 
-
 - [What are geodesics?](#what-are-geodesics)
 - [Mathematical description of shortest path](#mathematical-description-of-shortest-path)
 - [Lagrangian description of a geodesic](#lagrangian-description-of-a-geodesic)
@@ -19,14 +18,14 @@ The main ingredient of any GR render is figuring out how the rays of light move 
   
 ---
 
-### What are geodesics?
+## What are geodesics?
 So how exactly do we trace rays in curves space? Any object inside a curved space follows something called a geodesic.
 
 A geodesic is just a fancy word for a path of shortest length between 2 points inside a space, and there could be multiple of such paths, which are locally minimal (in the sense that you can't nudge the path to make it shorter, globally there might be a shorter path). It should be noted, however, that in Minkowski space-time the definition is a bit more complicated, because of the imaginary distances (when \\( ds^2 < 0 \\)),. But instead of paths between 2 points we're only interested in finding how a ray moves. So essentially, we have a position in space and a direction of movement, and we would like to know how the direction of movement changes to minimize the length of the path the ray takes.
 
 ---
 
-### Mathematical description of shortest path
+## Mathematical description of shortest path
 *Here I'll try to very roughly explain the derivation, a more in-depth explanation would at least require a multi-part series of blog posts. And if you wish to skip over the math part, jump to [Writing a Hamiltonian geodesic tracer in GLSL](#writing-a-hamiltonian-geodesic-tracer-in-glsl).*
 
 Mathematically speaking we have some coordinate system, a path, and a way to compute distances between 2 points. 
@@ -80,7 +79,7 @@ Now our main question is how do we minimize the path length? Here is where we in
 
 ---
 
-### Lagrangian description of a geodesic
+## Lagrangian description of a geodesic
 There is an entire branch of physics related to variational principles, and basically any kind of physical system has a value it likes to minimize (or more generally make unchanging under small variations of path). That value is called action, and the function under the integral is called the Lagrangian function of the system. The branch of physics studying Lagrangian functions of systems is called Lagrangian mechanics. 
 
 In our case the Lagrangian can be written like this:
@@ -217,7 +216,7 @@ And that's our final system of equations for a geodesic, we could of course also
 
 ---
 
-### Hamiltonian description of a geodesic
+## Hamiltonian description of a geodesic
 So here comes the star of the show - Hamiltonian mechanics. Hamiltonian equations of motion have a really nice form which allows to easily write a computer program that integrates them by using Euler integration.
 
 \begin{equation}
@@ -286,7 +285,7 @@ This is all we need to write a numerical geodesic integrator!
 
 ---
 
-### Writing a Hamiltonian geodesic tracer in GLSL
+## Writing a Hamiltonian geodesic tracer in GLSL
 
 You might have noticed that in the final Hamilton's equations of motion I didn't write out \\( \frac{\partial H}{\partial x^i} \\), this is actually important! We want to keep the derivative of the Hamiltonian as is, because then instead of computing the 64 derivatives of the metric tensor, we only need 4 to find the Hamiltonian gradient. This is the main simplification of the geodesic tracing algorithm.
 
@@ -480,7 +479,7 @@ mat4 Metric(vec4 x)
 
 This is, of course, not the limit for optimization. The main other optimization is computing analytical inverses of the metric. For a large class of metrics you can use the [Sherman–Morrison formula](https://en.wikipedia.org/wiki/Sherman%E2%80%93Morrison_formula) [9]
 
-#### Some useful things to keep in mind
+### Some useful things to keep in mind
 
 Since we used numerical finite differences, the results can actually depend quite a lot on the relative values of the float numbers. For example, the accuracy of the numerical derivatives is a lot lower far from the coordinate system center, so you'd need to vary the size of `eps` to avoid excessive numerical noise. Also, metrics quite often have numerical singularities which you should avoid, unless you want to get NaN results. 
 
@@ -492,7 +491,7 @@ And finally you could always derive the equations analytically, while this is th
 
 ---
 
-### Conclusions
+## Conclusions
 
 Using this ray tracing algorithm, you can basically render whatever you want inside any definable space-time. This algorithm was used to render different warped space-times inside of Space Engine, you can check out the blog posts about this:
 
