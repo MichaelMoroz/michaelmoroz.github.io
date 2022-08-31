@@ -485,7 +485,7 @@ Since we used numerical finite differences, the results can actually depend quit
 
 I usually avoid metrics in spherical coordinates due to their polar axis singularity, which has strong visual effects which are extremely hard to avoid even with a tiny varying timestep, although such metrics are usually mathematically simpler and allow for larger timesteps without breaking the look of the Black hole. For spherically symmetric metrics, like non-spinning black holes and wormholes there is a trick to avoid the polar singularity altogether! The thing about spherical symmetry is that the geodesic is always moving inside a 2d plane, which can be mapped to the equatorial plane of the coordinate system, basically reducing the 3d + 1 time problem to 2d + time. ([Scott Manley has a video explaining how he rendered wormholes](https://youtu.be/PVO8nvb1o2w), in there he used this trick + precomputing a lookup table to simplify the computation by a lot)
 
-I've used the dimensionality reduction trick in my wormhole shadertoy:
+I've also used the dimensionality reduction trick in my wormhole shadertoy:
 
 <center><iframe width="900" height="500" frameborder="0" src="https://www.shadertoy.com/embed/stByz1?gui=true&t=10&paused=true&muted=false" allowfullscreen></iframe></center>
 
