@@ -518,6 +518,108 @@ void TraceGeodesic(inout vec3 pos, inout vec3 dir, inout float time)
 
 Essentially this is just a 4D ray marching algorithm where the direction of the ray changes every step. In this specific case the size of the step also changes, which can be avoided by normalizing the momentum `p = normalize(p)`. This only changes the step length, and doesn't change the geodesic path, i.e., it works just like a dynamic reparameterization of the path. The time step of the integration can also be varied depending on the metric used. For example, in the case of black holes I change the time step proportionally to the distance to the event horizon, so that the accuracy of the geodesic is roughly proportional to the curvature of space. This is an important optimization to get accurate results, while keeping the computational cost relatively small.
 
+
+<details>
+<summary>Example shadertoy code</summary>
+
+```glsl
+mat4 diag(vec4 a)
+{
+    return mat4(a.x,0,0,0,
+                0,a.y,0,0,
+                0,0,a.z,0,
+                0,0,0,a.w);
+}
+
+mat4 Metric(vec4 x)
+{
+    //Kerr-Newman metric in Kerr-Schild coordinates 
+    const float a = 0.8;
+    const float m = 1.0;
+    const float Q = 0.0;
+    vec3 p = x.yzw;
+    float rho = dot(p,p) - a*a;
+    float r2 = 0.5*(rho + sqrt(rho*rho + 4.0*a*a*p.z*p.z));
+    float r = sqrt(r2);
+    vec4 k = vec4(1, (r*p.x + a*p.y)/(r2 + a*a), (r*p.y - a*p.x)/(r2 + a*a), p.z/r);
+    float f = r2*(2.0*m*r - Q*Q)/(r2*r2 + a*a*p.z*p.z);
+    return f*mat4(k.x*k, k.y*k, k.z*k, k.w*k)+diag(vec4(-1,1,1,1));
+}
+
+float Hamiltonian(vec4 x, vec4 p)
+{
+    mat4 g_inv = inverse(Metric(x));
+    return 0.5*dot(g_inv*p,p);
+}
+
+/*
+float Lagrangian(vec4 x, vec4 dxdt)
+{
+    return 0.5*dot(Metric(x)*dxdt,dxdt);
+}
+*/
+
+vec4 HamiltonianGradient(vec4 x, vec4 p)
+{
+    const float eps = 0.001;
+    return (vec4(Hamiltonian(x + vec4(eps,0,0,0), p),
+                 Hamiltonian(x + vec4(0,eps,0,0), p),
+                 Hamiltonian(x + vec4(0,0,eps,0), p),
+                 Hamiltonian(x + vec4(0,0,0,eps), p)) - Hamiltonian(x,p))/eps;
+}
+
+void IntegrationStep(inout vec4 x, inout vec4 p)
+{
+    const float TimeStep = 0.15;
+    p = p - TimeStep * HamiltonianGradient(x, p);
+    x = x + TimeStep * inverse(Metric(x)) * p;
+}
+
+vec4 GetNullMomentum(vec4 x, vec3 dir)
+{
+    return Metric(x) * vec4(1.0, normalize(dir));
+}
+
+vec3 GetDirection(vec4 x, vec4 p)
+{
+    vec4 dxdt = inverse(Metric(x)) * p;
+    return normalize(dxdt.yzw);
+}
+
+void TraceGeodesic(inout vec3 pos, inout vec3 dir, inout float time)
+{
+    vec4 x = vec4(time, pos);
+    vec4 p = GetNullMomentum(x, dir);
+
+    const int steps = 256;
+    for(int i = 0; i < steps; i++)
+    {
+        IntegrationStep(x, p);
+        //you can add a stop condition here when x is below the event horizon for example
+    }
+
+    pos = x.yzw;
+    time = x.x;
+    dir = GetDirection(x, p);
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = 2.0 * (fragCoord - 0.5 * iResolution.xy) / max(iResolution.x, iResolution.y);
+
+    vec3 RayPos = vec3( 0.0,  0.0,  32.0);
+    vec3 RayDir = vec3(uv.x, uv.y, -1.0);
+    float  Time = 0.0;
+
+    RayDir = normalize(RayDir);
+
+    TraceGeodesic(RayPos, RayDir, Time);
+
+    fragColor = vec4(texture(iChannel0, RayDir).rgb, 1.0);
+}
+```
+
+</details>
+
 You can check out this Shadertoy implementation to see some of the optimizations, like variable timestep, replacing Hamiltonians with Lagrangians, using a symmetric matrix inversion function (a bit faster), reusing some of the computed values (restart if the Shadertoy is black):
 
 <center><iframe width="900" height="500" frameborder="0" src="https://www.shadertoy.com/embed/NtSGWG?gui=true&t=10&paused=false&muted=false" allowfullscreen></iframe></center>
