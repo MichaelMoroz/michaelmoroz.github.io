@@ -4,7 +4,7 @@ title: About
 permalink: /about/
 ---
 
-I'm interested in all kinds of real time simulations and rendering.
+I'm interested in all kinds of real time simulations and rendering. Nowadays I'm working as the Lead 3D Research engineer at Zibra AI, usually doing high performance compute based simulations. Also as a hobby I try mess with more advanced physics like General Relativity. The geodesic ray tracer I've worked on is now part of Space Engine.
 
 ### Contact me
 
