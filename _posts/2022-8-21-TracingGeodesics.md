@@ -540,7 +540,7 @@ mat4 Metric(vec4 x)
   const float a = 0.8;
   const float m = 1.0;
   const float Q = 0.0;
-  vec3 p = q.yzw;
+  vec3 p = x.yzw;
   float rho = dot(p,p) - a*a;
   float r2 = 0.5*(rho + sqrt(rho*rho + 4.0*a*a*p.z*p.z));
   float r = sqrt(r2);
@@ -600,7 +600,7 @@ Combining this with SDF's is somewhat easier, you need to vary the geodesic step
 
 The project is [here](https://github.com/The-Order-of-the-Simulation/SpaceTimePathTracer), but don't expect very readable code, this was mostly intended as an experiment.
 
-Note that rendering **moving** objects is waaay harder, and requires either to have a space time SDF, or some insane acceleration structure for triangles. And on top of that the entire history of the scene's past needs to be kept in memeory, the only simple cases are when the moving objects can be represented as analytical functions you can sample in space and time, like the volumetric accretion disk in Space Engine.
+Note that rendering **moving** objects is waaay harder, and requires either to have a space time SDF, or some insane acceleration structure for triangles. And on top of that the entire history of the scene's past needs to be kept in memory, the only simple cases are when the moving objects can be represented as analytical functions you can sample in space and time, like the volumetric accretion disk in Space Engine.
 
 ---
 
