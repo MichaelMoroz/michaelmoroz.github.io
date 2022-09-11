@@ -519,8 +519,7 @@ void TraceGeodesic(inout vec3 pos, inout vec3 dir, inout float time)
 Essentially this is just a 4D ray marching algorithm where the direction of the ray changes every step. In this specific case the size of the step also changes, which can be avoided by normalizing the momentum `p = normalize(p)`. This only changes the step length, and doesn't change the geodesic path, i.e., it works just like a dynamic reparameterization of the path. The time step of the integration can also be varied depending on the metric used. For example, in the case of black holes I change the time step proportionally to the distance to the event horizon, so that the accuracy of the geodesic is roughly proportional to the curvature of space. This is an important optimization to get accurate results, while keeping the computational cost relatively small.
 
 
-<details>
-<summary>Example shadertoy code</summary>
+Example shadertoy code:
 
 ```glsl
 mat4 diag(vec4 a)
@@ -617,8 +616,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     fragColor = vec4(texture(iChannel0, RayDir).rgb, 1.0);
 }
 ```
-
-</details>
 
 You can check out this Shadertoy implementation to see some of the optimizations, like variable timestep, replacing Hamiltonians with Lagrangians, using a symmetric matrix inversion function (a bit faster), reusing some of the computed values (restart if the Shadertoy is black):
 
