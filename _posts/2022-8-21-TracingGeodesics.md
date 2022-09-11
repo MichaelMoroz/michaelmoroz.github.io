@@ -4,9 +4,9 @@ title: Visualizing General Relativity
 image: SpaceEngineBH.jpg
 ---
 
-When dealing with renders of things like warp drives and black holes we usually just expect to see a simple approximation or an artist rendition, usually assuming the math required to pull off something accurate would require someone with at least a PhD in Mathematical Physics, which in most cases is somewhat true, but not necessarily. In this blog post I'll try to explain a way to do quite accurate visualizations within a 100 or so lines of code, for basically any kind of space time for which you can write its metric as code. The detailed mathematical derivation of this approach might be somewhat math heavy though.
+When thinking about renders of things like warp drives and black holes we usually just expect to see a simple approximation or an artist rendition, assuming the math required to pull off something accurate would require someone with at least a PhD in Mathematical Physics. Which I won't tell that its completely untrue, but in this blog post I'll try to explain a way to do quite accurate visualizations within a 100 or so lines of code, for basically any kind of space time for which you can write its metric as code. Although, the detailed mathematical derivation of this approach might be somewhat math heavy.
 
-The main ingredient of any GR render is figuring out how the rays of light move around. Knowing how light moves we can trace rays from the camera into the scene as see where the light came from. So, to render a basic scene without objects we simply trace a ray for each pixel and assign the color of the pixel to the color of the skybox in the direction in which the ray ends up pointing to.
+The main ingredient of any GR render is figuring out how the rays of light move around. Knowing how light moves we can trace rays from the camera into the scene and see where the light came from. So, to render the simplest scene without objects we simply trace a ray for each pixel and assign the color of the pixel to the color of the skybox in the direction in which the ray ends up pointing to.
 
 - [What are geodesics?](#what-are-geodesics)
 - [Mathematical description of shortest path](#mathematical-description-of-shortest-path)
@@ -19,20 +19,23 @@ The main ingredient of any GR render is figuring out how the rays of light move 
 ---
 
 ## What are geodesics?
-So how exactly do we trace rays in curves space? Any object inside a curved space follows something called a geodesic.
+How exactly do we trace rays in curves space? Any object inside a curved space follows something called a geodesic.
 
-A geodesic is just a fancy word for a path of shortest length between 2 points inside a space, and there could be multiple of such paths, which are locally minimal (in the sense that you can't nudge the path to make it shorter, globally there might be a shorter path). It should be noted, however, that in Minkowski space-time the definition is a bit more complicated, because of the imaginary distances (when \\( ds^2 < 0 \\)),. But instead of paths between 2 points we're only interested in finding how a ray moves. So essentially, we have a position in space and a direction of movement, and we would like to know how the direction of movement changes to minimize the length of the path the ray takes.
+A geodesic is just a fancy word for, in some sense, a path of shortest length between 2 points inside a space. 
 
+I should note that there could be multiple of such paths, which are locally minimal, in the sense that you can't nudge the path to make it shorter, while globally there might be a shorter path. Also, in Minkowski space-time the definition is a bit more complicated, because of the imaginary distances (when \\( ds^2 < 0 \\)).
+
+In our case, instead of paths between 2 points, we are only interested in finding how a ray moves given an initial point and direction, but the definition above will still prove useful when deriving the equations describing a geodesic, which we will use here.
 ---
 
 ## Mathematical description of shortest path
-*Here I'll try to very roughly explain the derivation, a more in-depth explanation would at least require a multi-part series of blog posts. And if you wish to skip over the math part, jump to [Writing a Hamiltonian geodesic tracer in GLSL](#writing-a-hamiltonian-geodesic-tracer-in-glsl).*
+*I'll try to quickly go through the derivation. If you wish to skip the math part, jump to [Writing a Hamiltonian geodesic tracer in GLSL](#writing-a-hamiltonian-geodesic-tracer-in-glsl).*
 
 Mathematically speaking we have some coordinate system, a path, and a way to compute distances between 2 points. 
 
-A coordinate system being a set of several numbers labeling each point in the space. A path is a function that takes in the path parameter and outputs a coordinate, in GR the path parameter is usually proper time (like a clock moving with the object), but it can be anything really. And the way to compute distances is called a metric, and it's the main source of scary math here.
+A coordinate system being a set of several numbers labeling each point in the space. A path is a function that takes in the path parameter and outputs a coordinate, in General Relativity the path parameter is usually proper time (like a clock moving with the object, labeling each point), but it can be anything really. The way to compute distances is called a metric (and it's the main source of scary math here).
 
-In physics, or more generally differential geometry, a metric is defined as an integral("sum") of something called the metric tensor. A metric tensor is a bilinear form \\( g(a, b) \\), it essentially maps pairs of vectors to real numbers, and is a generalization of dot product for curved spaces. So using a metric tensor we can find the length of a vector in space, and distances \\( ds \\) between infinitely close points in space.
+In physics, or more generally differential geometry, a metric is defined as an integral("sum") of something called the metric tensor. A metric tensor is a bilinear form \\( g(a, b) \\), it essentially maps pairs of vectors to real numbers, and is a generalization of dot product for curved spaces. So using a metric tensor we can find the length of a vector in space, and also distances \\( ds \\) between infinitely close points in space.
 
  
 \begin{equation}
@@ -42,7 +45,7 @@ In physics, or more generally differential geometry, a metric is defined as an i
 In our case, where we describe vectors as a set of numbers, a metric is simply a matrix product of some matrix \\( g_{\mu \nu} \\) times the vectors. For our infinitesimal distance \\( ds \\) we get this expression:
 
 \begin{equation}
-  ds^2 = \sum_{\mu \nu}^N g_{\mu \nu} dx_\mu dx_\nu
+  ds^2 = \sum_{\mu \nu}^N g_{\mu \nu} dx^\mu dx^\nu
 \end{equation}
 
 Usually the sum is just implicitly assumed by [Einstein notation](https://en.wikipedia.org/wiki/Einstein_notation) [1].
@@ -51,7 +54,7 @@ Usually the sum is just implicitly assumed by [Einstein notation](https://en.wik
  ds^2 = g_{\mu \nu} dx^\mu dx^\nu 
 \end{equation} 
 
-Here we can actually see that for some simple choices of \\( g_{\mu \nu} \\) we can get the distances by Pythagoras' theorem. Specifically for the case when the metric tensor matrix is a unit matrix.
+Here we can actually see that for some simple choice of \\( g_{\mu \nu} \\) we can get the distances by Pythagoras' theorem. Specifically for the case when the metric tensor matrix is a unit matrix.
 
 \begin{equation}
  ds^2 = dx_1^2 + dx_2^2 + dx_3^2 
@@ -66,7 +69,7 @@ For a flat space-time like space, we get something similar but with the exceptio
 
 Here I used the \\( (- + + +) \\) signature, but signs can actually be flipped without changing the geodesics, and in some cases, like for particle physics, it makes more sense to use the opposite \\( (+ - - -) \\) signature.
 
-Going back to the main question of computing distances, to compute the length between 2 points along some path we simply need to sum the infinitesimal distances together using an integral:
+Going back to the main question of computing distances, to compute the length between 2 points, A and B, along some path \\( x^i(t) \\) we simply need to sum the infinitesimal distances together using an integral:
 
 \begin{equation}
  l = \int_A^B \sqrt{g_{\mu \nu} dx^\mu dx^\nu} = \int_A^B \sqrt{g_{\mu \nu} dx^\mu dx^\nu} \frac{dt}{dt} = \int_A^B \sqrt{g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt}} dt
@@ -74,13 +77,13 @@ Going back to the main question of computing distances, to compute the length be
 
 Where \\( \frac{dx^i}{dt} \\) is simply how fast the coordinate x changes with respect to the path parameter ("clock"), in some sense can be interpreted as the velocity. 
 
-Now our main question is how do we minimize the path length? Here is where we introduce a thing called calculus of variations, which is roughly speaking a way to find how a functional(distance) changes by varying its input function(path). Such derivatives have similar properties to normal function derivatives. And in fact, similarly to calculus, to find the extremum of a function (min, max or stationary point), we simply need to equate the variation to 0.
+Now our main question is how do we minimize the path length? Here is where we introduce a thing called calculus of variations, which is roughly speaking a way to find how a functional(distance) changes by infinitesimally small variations of its input function(path). Such derivatives have similar properties to normal function derivatives. And in fact, similarly to calculus, to find the extremum of a function (min, max or stationary point), we simply need to equate the variation to 0.
 
 
 ---
 
 ## Lagrangian description of a geodesic
-There is an entire branch of physics related to variational principles, and basically any kind of physical system has a value it likes to minimize (or more generally make unchanging under small variations of path). That value is called action, and the function under the integral is called the Lagrangian function of the system. The branch of physics studying Lagrangian functions of systems is called Lagrangian mechanics. 
+There is an entire branch of physics related to variational principles, which states that any kind of physical system has a value it likes to minimize (or more generally make unchanging under small variations of path, i.e. "stationary"). That value is called [action](https://en.wikipedia.org/wiki/Action_(physics)), and the function under the integral is called the [Lagrangian function of the system](https://en.wikipedia.org/wiki/Lagrangian_mechanics). The branch of physics studying Lagrangian functions of systems is called Lagrangian mechanics. 
 
 In our case the Lagrangian can be written like this:
 
@@ -88,15 +91,15 @@ In our case the Lagrangian can be written like this:
  L = \sqrt{g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt}}
 \end{equation}
 
-Turns out we don't need the square root for the minimum of the functional to be a geodesic, we can simply use this as our geodesic Lagrangian:
+Turns out we don't need the square root for the minimum of the functional to be a geodesic, and we can simply remove it from our geodesic Lagrangian:
 
 \begin{equation}
  L = g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} 
 \end{equation}
 
-The proof of this you can find [here](https://physics.stackexchange.com/questions/149082/geodesic-equation-from-variation-is-the-squared-lagrangian-equivalent) [2]. The only difference such simplification makes is that the parametrization of the path might be different, but the path itself will be the same.
+The proof of this you can find [here](https://physics.stackexchange.com/questions/149082/geodesic-equation-from-variation-is-the-squared-lagrangian-equivalent) [2]. The only difference such simplification makes is that the parametrization of the path might be different, but the path itself will be the same. Also notably, the equations for this specific case turn out to be the same, meaning the parametrization is also the same.
 
-Also, we want this with a 1/2 factor, to simplify the equations down the line.
+Additionally, we want this with a 1/2 factor, to simplify the equations down the line.
 
 \begin{equation}
  L = \frac{1}{2} g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} 
@@ -127,7 +130,7 @@ In general, the Action can be written like
   S = \int_A^B  L(t, x(t), \frac{dx(t)}{dt}) dt 
 \end{equation*}
 
-Where the Lagrangian is a function of the path parameter("clock"), the path itself, and the derivative of the path with respect to the path parameter.
+Where the Lagrangian is a function of the path parameter, the path itself, and the derivative of the path with respect to the path parameter.
 
 To find the minimizing path (or more generally, stationary path) of a functional we need to equate the variation of the action to 0
 
@@ -135,13 +138,15 @@ To find the minimizing path (or more generally, stationary path) of a functional
   \delta S = 0
 \end{equation*}
 
-Where the variation of the action is found by adding a small variation \( \delta x \) to the path: \( L(t, x + \delta x, \frac{d(x + \delta x)}{dt}) \)
+Where the variation of the action is found by adding a small variation \( \delta x \) to the path: \( L(t, x + \delta x, \frac{d(x + \delta x)}{dt}) \) and expanding the 2D Taylor series around the point \( \left( x, \frac{dx(t)}{dt} \right)\)
 
 \begin{equation*}
   \delta S = \int_A^B \left( \frac{\partial L}{\partial x} \delta x + \frac{\partial L}{\partial \frac{dx}{dt}} \frac{d(\delta x)}{dt} \right) dt
 \end{equation*}
 
-We use integration by parts to get rid of the derivative \( \frac{d}{dt} \) off the path variation 
+We dropped the higher order terms since we assume \( \delta x \) to be infinitesimally small.
+
+Then we use integration by parts to get the derivative \( \frac{d}{dt} \) off the path variation
 
 \begin{equation*}
   \delta S = \int_A^B \left( \frac{\partial L}{\partial x} \delta x - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx}{dt}} \delta x \right) dt + \left( \frac{\partial L}{\partial \frac{dx}{dt}} \delta x \right) \biggr \rvert_A^B
@@ -226,18 +231,85 @@ So here comes the star of the show - Hamiltonian mechanics. Hamiltonian equation
  \frac{dx^i}{dt} =   \frac{\partial H}{\partial p^i} 
 \end{equation}
 
-The derivation of Hamilton's equations of motion can be found [here](https://en.wikipedia.org/wiki/Hamiltonian_mechanics#Deriving_Hamilton's_equations) [5].
-\\( p \\) is the so called generalized momentum, it's the derivative of the Lagrangian with respect to the path parameter.
+Where \\( p \\) is the so called generalized momentum, it's the derivative of the Lagrangian with respect to the path parameter.
 
 \begin{equation}
  p_i = \frac{\partial L}{\partial \frac{dx^i}{dt} } 
+ \label{momentumdef}
 \end{equation}
 
 And to get the Hamiltonian itself you need to apply the [Legendre Transform](https://blog.jessriedel.com/2017/06/28/legendre-transform/) [6] on the Lagrangian:
 
 \begin{equation}
  H = \sum_{i}^N p^i \frac{dx^i}{dt} - L 
+ \label{legandre}
 \end{equation}
+
+---
+
+<details>
+<summary>Hamilton equations of motion derivation</summary>
+
+Lets start by writing the Euler-Lagrange equations
+
+\begin{equation*}
+  \frac{\partial L}{\partial x} - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx}{dt}} = 0
+\end{equation*}
+
+You can see that \(\frac{\partial L}{\partial \frac{dx}{dt}\) is equal to our definition of generalized momentum \eqref{momentumdef}, so we can substitude it here
+
+\begin{equation*}
+  \frac{\partial L}{\partial x} - \frac{dp}{dt} = 0
+\end{equation*}
+
+Now lets substitude H instead of \(L\) by using the definition \eqref{legandre}
+
+\begin{equation*}
+  \frac{\partial}{\partial x} \left(  p \frac{dx}{dt} - H \right) - \frac{dp}{dt} = 0
+\end{equation*}
+
+The partial derivative of \( p \frac{dx}{dt}  \) with respect to \(x\) is 0, since changing x doesn't change \( p \) or \( \frac{dx}{dt} \) 
+
+\begin{equation*}
+  \frac{\partial}{\partial x} \left(- H \right) - \frac{dp}{dt} = 0
+\end{equation*}
+
+After moving things around 
+
+\begin{equation*}
+  \frac{dp}{dt} = - \frac{\partial H}{\partial x}
+\end{equation*}
+
+Which is our first equation.
+
+Now lets take the partial derivative of \eqref{legandre} with respect to generalized momentum
+
+\begin{equation}
+ \frac{\partial H}{\partial p} =  \frac{\partial}{\partial p} \left( p \frac{dx}{dt} - L \right)    
+\end{equation}
+
+Since \(L\) doesn't depend on \(p\) (as the value of \(L\) doesn't depend on its partial derivative), it means that \( \frac{\partial L}{\partial p} = 0 \), so we get
+
+\begin{equation}
+ \frac{\partial H}{\partial p} =  \frac{\partial}{\partial p} \left( p \frac{dx}{dt} \right)    
+\end{equation}
+
+\begin{equation}
+ \frac{\partial H}{\partial p} =  \frac{dx}{dt} 
+\end{equation}
+
+\begin{equation}
+ \frac{dx}{dt} = \frac{\partial H}{\partial p}
+\end{equation}
+
+Which is our second equation.
+
+</details>
+
+A different derivation of Hamilton's equations of motion can be found [here](https://en.wikipedia.org/wiki/Hamiltonian_mechanics#Deriving_Hamilton's_equations) [5].
+
+---
+
 
 And for our case the momentum would be the following, which we already computed when writing down the Euler-Lagrange equations:
 
