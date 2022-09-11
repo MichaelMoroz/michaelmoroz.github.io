@@ -131,7 +131,7 @@ In general, the Action can be written like
   S = \int_A^B  L(t, x(t), \frac{dx(t)}{dt}) dt 
 \end{equation*}
 
-Where the Lagrangian is a function of the path parameter, the path itself, and the derivative of the path with respect to the path parameter.
+Where the Lagrangian is a function of the path parameter, the path itself, and the derivative of the path with respect to the path parameter(also known as the generalized velocity).
 
 To find the minimizing path (or more generally, stationary path) of a functional we need to equate the variation of the action to 0
 
@@ -233,7 +233,7 @@ So here comes the star of the show - Hamiltonian mechanics. Hamiltonian equation
  \frac{dx^i}{dt} =   \frac{\partial H}{\partial p^i} 
 \end{equation}
 
-Where \\( p \\) is the so called generalized momentum, it's the derivative of the Lagrangian with respect to the path parameter.
+Where \\( p \\) is the so called generalized momentum, it's the derivative of the Lagrangian with respect to the coordinate path parameter derivative.
 
 \begin{equation}
  p_i = \frac{\partial L}{\partial \frac{dx^i}{dt} } 
