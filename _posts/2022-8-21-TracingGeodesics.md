@@ -569,6 +569,17 @@ And finally you could always derive the equations analytically, while this is th
 
 Figuring out if the ray has fallen inside the event horizon is actually not trivial, and there is no universal method, and while you could just set the color to 0 if the ray is below the event horizon surface, this is incorrect when viewing things from inside the black hole. Tracing the rays should also be done backwards in time, since we trace the rays from the camera, not to the camera, this has a noticeble effect on the resulting render, if not done this also results in completely dark renderes inside of black holes, even though light does exist under the event horizon, and can reach from the outside.
 
+[Redshift in General Relativity](https://figshare.com/s/02c8b839dfb53f6e1a59) can be computed simply from the ratio of the dot products of the velocity of the object at emission/absorption times the momentum of the photon, where the momentum of the photon is parallel to the photons direction of movement. The momentum needs to be parallel transported along the geodesic from emission to absorption, and the good news is - we can just use the geodesic 4-velocity instead, since it also is technically parallel transported along the geodesic and is pointed in the direction of movement. (Just in case, this also means we need to avoid renormalizing the generalized momentum when integrating the equations) 
+
+Also notably, the dot product in General Relativity is simply defined from the metric tensor \( g(u,v) \)
+
+\begin{equation}
+ u \cdot v = g_{\mu \nu} u^\mu v^\nu 
+\end{equation} 
+
+Finally, if you only want to compute geodesics for Schwarzschild black holes, you can simply use the equation for a particle with mass 1 in a ceirtain classical force field, details are in 
+[this blog post](https://rantonels.github.io/starless/).
+
 ---
 
 ## Conclusions
@@ -589,8 +600,7 @@ Combining this with SDF's is somewhat easier, you need to vary the geodesic step
 
 The project is [here](https://github.com/The-Order-of-the-Simulation/SpaceTimePathTracer), but don't expect very readable code, this was mostly intended as an experiment.
 
-Note that rendering **moving** objects is waaay harder, and requires either to do have a space time SDF, or some insane acceleration structure for triangles, on top of that the entire history of the scene's past needs to be kept in memeory, the only simple cases is when the moving objects are an analytical function you can sample in space and time, like the volumetric accretion disk in Space Engine.
-
+Note that rendering **moving** objects is waaay harder, and requires either to have a space time SDF, or some insane acceleration structure for triangles. And on top of that the entire history of the scene's past needs to be kept in memeory, the only simple cases are when the moving objects can be represented as analytical functions you can sample in space and time, like the volumetric accretion disk in Space Engine.
 
 ---
 
