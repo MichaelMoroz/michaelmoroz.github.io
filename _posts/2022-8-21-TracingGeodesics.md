@@ -23,9 +23,10 @@ How exactly do we trace rays in curves space? Any object inside a curved space f
 
 A geodesic is just a fancy word for, in some sense, a path of shortest length between 2 points inside a space. 
 
-I should note that there could be multiple of such paths, which are locally minimal, in the sense that you can't nudge the path to make it shorter, while globally there might be a shorter path. Also, in Minkowski space-time the definition is a bit more complicated, because of the imaginary distances (when \\( ds^2 < 0 \\)).
+I should note that there could be multiple of such paths, which are locally minimal, in the sense that you can't nudge the path to make it shorter, while globally there might be a shorter path. Also, in Minkowski space-time the definition is a bit more complicated, because of the imaginary distances (when \( ds^2 < 0 \) ).
 
 In our case, instead of paths between 2 points, we are only interested in finding how a ray moves given an initial point and direction, but the definition above will still prove useful when deriving the equations describing a geodesic, which we will use here.
+
 ---
 
 ## Mathematical description of shortest path
@@ -250,19 +251,19 @@ And to get the Hamiltonian itself you need to apply the [Legendre Transform](htt
 <details>
 <summary>Hamilton equations of motion derivation</summary>
 
-Lets start by writing the Euler-Lagrange equations
+Lets start by writing down the Euler-Lagrange equation
 
 \begin{equation*}
   \frac{\partial L}{\partial x} - \frac{d}{dt} \frac{\partial L}{\partial \frac{dx}{dt}} = 0
 \end{equation*}
 
-You can see that \(\frac{\partial L}{\partial \frac{dx}{dt}\) is equal to our definition of generalized momentum \eqref{momentumdef}, so we can substitude it here
+You can see that \( \frac{\partial L}{\partial \frac{dx}{dt} } \) is equal to our definition of generalized momentum \eqref{momentumdef}, so we can substitude it here
 
 \begin{equation*}
   \frac{\partial L}{\partial x} - \frac{dp}{dt} = 0
 \end{equation*}
 
-Now lets substitude H instead of \(L\) by using the definition \eqref{legandre}
+Now lets substitude \(H\) instead of \(L\) by using the definition \eqref{legandre}
 
 \begin{equation*}
   \frac{\partial}{\partial x} \left(  p \frac{dx}{dt} - H \right) - \frac{dp}{dt} = 0
@@ -284,23 +285,23 @@ Which is our first equation.
 
 Now lets take the partial derivative of \eqref{legandre} with respect to generalized momentum
 
-\begin{equation}
- \frac{\partial H}{\partial p} =  \frac{\partial}{\partial p} \left( p \frac{dx}{dt} - L \right)    
-\end{equation}
+\begin{equation*}
+ \frac{\partial H}{\partial p} =  \frac{\partial}{\partial p} \left( p \frac{dx}{dt}  \right) - \frac{\partial L}{\partial p}  
+\end{equation*}
 
 Since \(L\) doesn't depend on \(p\) (as the value of \(L\) doesn't depend on its partial derivative), it means that \( \frac{\partial L}{\partial p} = 0 \), so we get
 
-\begin{equation}
+\begin{equation*}
  \frac{\partial H}{\partial p} =  \frac{\partial}{\partial p} \left( p \frac{dx}{dt} \right)    
-\end{equation}
+\end{equation*}
 
-\begin{equation}
+\begin{equation*}
  \frac{\partial H}{\partial p} =  \frac{dx}{dt} 
-\end{equation}
+\end{equation*}
 
-\begin{equation}
+\begin{equation*}
  \frac{dx}{dt} = \frac{\partial H}{\partial p}
-\end{equation}
+\end{equation*}
 
 Which is our second equation.
 
