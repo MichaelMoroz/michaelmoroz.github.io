@@ -571,7 +571,7 @@ Figuring out if the ray has fallen inside the event horizon is actually not triv
 
 [Redshift in General Relativity](https://figshare.com/s/02c8b839dfb53f6e1a59) can be computed simply from the ratio of the dot products of the velocity of the object at emission/absorption times the momentum of the photon, where the momentum of the photon is parallel to the photons direction of movement. The momentum needs to be parallel transported along the geodesic from emission to absorption, and the good news is - we can just use the geodesic 4-velocity instead, since it also is technically parallel transported along the geodesic and is pointed in the direction of movement. (Just in case, this also means we need to avoid renormalizing the generalized momentum when integrating the equations) 
 
-Also notably, the dot product in General Relativity is simply defined from the metric tensor \( g(u,v) \)
+Also notably, the dot product in General Relativity is simply defined from the metric tensor \\( g(u,v) \\)
 
 \begin{equation}
  u \cdot v = g_{\mu \nu} u^\mu v^\nu 
