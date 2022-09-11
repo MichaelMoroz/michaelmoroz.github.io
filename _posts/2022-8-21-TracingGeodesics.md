@@ -23,7 +23,7 @@ How exactly do we trace rays in curves space? Any object inside a curved space f
 
 A geodesic is just a fancy word for, in some sense, a path of shortest length between 2 points inside a space. 
 
-I should note that there could be multiple of such paths, which are locally minimal, in the sense that you can't nudge the path to make it shorter, while globally there might be a shorter path. Also, in Minkowski space-time the definition is a bit more complicated, because of the imaginary distances (when \( ds^2 < 0 \) ).
+I should note that there could be multiple of such paths, which are locally minimal, in the sense that you can't nudge the path to make it shorter, while globally there might be a shorter path. Also, in Minkowski space-time the definition is a bit more complicated, because of the imaginary distances (when \\( ds^2 < 0 \\) ).
 
 In our case, instead of paths between 2 points, we are only interested in finding how a ray moves given an initial point and direction, but the definition above will still prove useful when deriving the equations describing a geodesic, which we will use here.
 
@@ -188,6 +188,7 @@ Let's derive the Euler-Lagrange equations for our geodesic Lagrangian (keep in m
     \frac{1}{2} \frac{\partial  }{\partial \frac{dx^i}{dt}} g_{\mu \nu} \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} = 
     \frac{1}{2} g_{i \nu} \frac{dx^\nu}{dt} + \frac{1}{2} g_{\mu i} \frac{dx^\mu}{dt} = 
     g_{i \nu} \frac{dx^\nu}{dt} 
+\label{el0}
 \end{equation}
 
 Then we take the derivative with respect to the path parameter:
@@ -269,7 +270,7 @@ Now lets substitude \(H\) instead of \(L\) by using the definition \eqref{legand
   \frac{\partial}{\partial x} \left(  p \frac{dx}{dt} - H \right) - \frac{dp}{dt} = 0
 \end{equation*}
 
-The partial derivative of \( p \frac{dx}{dt}  \) with respect to \(x\) is 0, since changing x doesn't change \( p \) or \( \frac{dx}{dt} \) 
+The partial derivative of \( p \frac{dx}{dt}  \) with respect to \(x\) is 0, since changing \(x\) doesn't change \( p \) or \( \frac{dx}{dt} \) 
 
 \begin{equation*}
   \frac{\partial}{\partial x} \left(- H \right) - \frac{dp}{dt} = 0
@@ -312,7 +313,7 @@ A different derivation of Hamilton's equations of motion can be found [here](htt
 ---
 
 
-And for our case the momentum would be the following, which we already computed when writing down the Euler-Lagrange equations:
+And for our case the momentum would be the following, which we already computed when writing down the Euler-Lagrange equations \eqref{el0}, and given the definition of generalized momentum \eqref{momentumdef}:
 
 \begin{equation}
  p_i = g_{i j} \frac{dx^j}{dt} 
