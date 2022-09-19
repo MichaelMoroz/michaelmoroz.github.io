@@ -4,7 +4,7 @@ title: Visualizing General Relativity
 image: SpaceEngineBH.jpg
 ---
 
-When thinking about renders of things like warp drives and black holes we usually just expect to see a simple approximation or an artist rendition, assuming the math required to pull off something accurate would require someone with at least a PhD in Mathematical Physics. Which I won't tell that its completely untrue, but in this blog post I'll try to explain a way to do quite accurate visualizations within a 100 or so lines of code, for basically any kind of space time for which you can write its metric as code. Although, the detailed mathematical derivation of this approach might be somewhat math heavy.
+When thinking about renders of things like warp drives and black holes we usually just expect to see a simple approximation or an artist rendition, assuming the math required to pull off something accurate would require someone with at least a PhD in Mathematical Physics. Which I won't tell that its completely untrue, but in this blog post I'll try to explain a way to do quite accurate visualizations within a 100 or so lines of code, for basically any kind of space-time for which you can write its metric as code. Although, the detailed mathematical derivation of this approach might be somewhat math heavy.
 
 The main ingredient of any GR render is figuring out how the rays of light move around. Knowing how light moves we can trace rays from the camera into the scene and see where the light came from. So, to render the simplest scene without objects we simply trace a ray for each pixel and assign the color of the pixel to the color of the skybox in the direction in which the ray ends up pointing to.
 
@@ -218,7 +218,7 @@ Multiplying by the metric tensor inverse \\( - g^{i \nu} \\) we get:
  \frac{d^2x^i}{dt^2} +  g^{i \nu} \left( \frac{d g_{i \nu} }{dx^\mu} - \frac{1}{2} \frac{d g_{\mu \nu} }{dx^i}  \right) \frac{dx^\mu}{dt} \frac{dx^\nu}{dt} = 0 
 \end{equation}
 
-And that's our final system of equations for a geodesic, we could of course also substitute the Christoffel symbols here, but for our application there is no difference. Of course, we could just use these equations for tracing geodesic rays and call it a day, but unfortunately this would require computing a whole lot of derivatives (in 4d space time it's 64 of them to be specific), either manually, or by using numerical differentiation. Thankfully there is a way to avoid this, and in fact simplify the entire algorithm! (At a slight performance cost)
+And that's our final system of equations for a geodesic, we could of course also substitute the Christoffel symbols here, but for our application there is no difference. Of course, we could just use these equations for tracing geodesic rays and call it a day, but unfortunately this would require computing a whole lot of derivatives (in 4d space-time it's 64 of them to be specific), either manually, or by using numerical differentiation. Thankfully there is a way to avoid this, and in fact simplify the entire algorithm! (At a slight performance cost)
 
 
 ---
@@ -392,7 +392,7 @@ mat4 Metric(vec4 x)
 
 In our case x is a 4D vector representing position. The first component `x.x` or `x[0]` being time. As an output we get a 4 by 4 matrix represented by `mat4` in GLSL. 
 
-Then we need to write down the Hamiltonian \eqref{hamiltonian}. The Hamiltonian is a function that takes 2 things, the position in space time, and the 4d momentum vector, and outputs a scalar.
+Then we need to write down the Hamiltonian \eqref{hamiltonian}. The Hamiltonian is a function that takes 2 things, the position in space-time, and the 4d momentum vector, and outputs a scalar.
 
 ```glsl
 
@@ -456,7 +456,7 @@ Before tracing the geodesic, you can use the equation \eqref{momentum}
 p = Metric(x) * dxdt;
 
 ```
-But what is dxdt? It's nothing more than the 4D direction the ray moves inside space time. There are 3 categories the directions can fall into:
+But what is dxdt? It's nothing more than the 4D direction the ray moves inside space-time. There are 3 categories the directions can fall into:
 * Time-like, when \\( A < 0 \\)
 * Null, when \\( A = 0 \\)
 * Space-like, when \\( A > 0 \\)
@@ -664,9 +664,9 @@ I've also used the dimensionality reduction trick in my wormhole shadertoy:
 
 There is also a different method that can be used to compute derivatives numerically, and way more accurately. Essentially it's forward automatic differentiation based on dual numbers, [there are some Shadertoy example which have used this approach](https://www.shadertoy.com/view/3tGcRt).
 
-And finally you could always derive the equations analytically, while this is the most annoying method it is usually the fastest performance-wise. A compromise solution would be derive the equations automatically, this approach is used by [geodesic_raytracing](https://github.com/20k/geodesic_raytracing) made by [James Berrow](https://twitter.com/berrow_james) (you should follow him on Twitter, he has a lot of cool stuff on this topic).
+And finally you could always derive the equations analytically, while this is the most annoying method it is usually the fastest performance-wise. A compromise solution would be derive the equations automatically (like in Wolfram Alpha), this approach is used by [geodesic_raytracing](https://github.com/20k/geodesic_raytracing) made by [James Berrow](https://twitter.com/berrow_james) (you should follow him on Twitter, he has a lot of cool stuff on this topic).
 
-Figuring out if the ray has fallen inside the event horizon is actually not trivial, and there is no universal method, and while you could just set the color to 0 if the ray is below the event horizon surface, this is incorrect when viewing things from inside the black hole. Tracing the rays should also be done backwards in time, since we trace the rays from the camera, not to the camera, this has a noticeble effect on the resulting render, if not done this also results in completely dark renderes inside of black holes, even though light does exist under the event horizon, and can reach from the outside.
+Figuring out if the ray has fallen inside the event horizon is actually not trivial, and there is no universal method, and while you could just set the color to 0 if the ray is below the event horizon surface, this is incorrect when viewing things from inside the black hole. Tracing the rays should also be done backwards in time, since we trace the rays from the camera, not to the camera, this has a noticeble effect on the resulting render, if not done this also results in completely dark renders inside of black holes, even though light does exist under the event horizon, and can reach from the outside.
 
 [Redshift in General Relativity](https://figshare.com/s/02c8b839dfb53f6e1a59) can be computed simply from the ratio of the dot products of the velocity of the object at emission/absorption times the momentum of the photon, where the momentum of the photon is parallel to the photons direction of movement. The momentum needs to be parallel transported along the geodesic from emission to absorption, and the good news is - we can just use the geodesic 4-velocity instead, since it also is technically parallel transported along the geodesic and is pointed in the direction of movement. (Just in case, this also means we need to avoid renormalizing the generalized momentum when integrating the equations) 
 
@@ -676,7 +676,7 @@ Also notably, the dot product in General Relativity is simply defined from the m
  u \cdot v = g_{\mu \nu} u^\mu v^\nu 
 \end{equation} 
 
-Finally, if you only want to compute geodesics for Schwarzschild black holes, you can simply use the equation for a particle with mass 1 in a ceirtain classical force field, details are in 
+Finally, if you only want to compute geodesics for Schwarzschild black holes, you can simply use the equation for a particle with mass 1 in a certain classical force field, details are in 
 [this blog post](https://rantonels.github.io/starless/).
 
 ---
@@ -699,7 +699,7 @@ Combining this with SDF's is somewhat easier, you need to vary the geodesic step
 
 The project is [here](https://github.com/The-Order-of-the-Simulation/SpaceTimePathTracer), but don't expect very readable code, this was mostly intended as an experiment.
 
-Note that rendering **moving** objects is waaay harder, and requires either to have a space time SDF, or some insane acceleration structure for triangles. And on top of that the entire history of the scene's past needs to be kept in memory, the only simple cases are when the moving objects can be represented as analytical functions you can sample in space and time, like the volumetric accretion disk in Space Engine.
+Note that rendering **moving** objects is waaay harder, and requires either to have a space-time SDF, or some insane acceleration structure for triangles. And on top of that the entire history of the scene's past needs to be kept in memory, the only simple cases are when the moving objects can be represented as analytical functions you can sample in space and time, like the volumetric accretion disk in Space Engine.
 
 ---
 
