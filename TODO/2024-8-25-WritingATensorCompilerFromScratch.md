@@ -4,13 +4,13 @@ title: Writing a tensor compiler from scratch
 image: ShadertoyParticles.png
 ---
 
-In this blog post I want to talk about the development of a library that I started working on more than a year ago -  [TensorFrost](https://github.com/MichaelMoroz/TensorFrost). Under the hood it's a static optimizing tensor compiler with a focus on being able to do more "shader-like" things while still having the ability to do high level linear algebra for ML in numpy-like syntax.
+In this blog post I want to talk about the development of a library that I started working on more than a year ago - [TensorFrost](https://github.com/MichaelMoroz/TensorFrost). Under the hood it's a static optimizing tensor compiler with a focus on being able to do more "shader-like" things while still having the ability to do high level linear algebra for ML in numpy-like syntax with automatic differentiation support.
 
-I started working on it 14 months ago, when I was working on neural variational monte carlo (NVMC) in Unity - it became obvious that Machine Learning, let alone of this kind, is simply a no go without the required tools. To make it even remotely work I needed to cut a lot of corners. Instead of using backpropagation I used evolution strategies (ES), the neural network was hardcoded into a single kernel (including the determinant which was computed in a single thread in the same kernel!), and the reduction operations were very primitive "loop over all elements per thread", which don't map that well to GPU's. Finding the median of an array was annoying, and I didn't bother with making a sorting algorithm, so I just found the "approximate" median, and there are probably other things I forgot about.
+I started working on it 14 months ago, when I was working on neural variational monte carlo (NVMC) in Unity. After some time it became obvious that Machine Learning, let alone of this kind, is simply a no go without the required tools. To make it even remotely work I needed to cut a lot of corners. Instead of using backpropagation I used evolution strategies, the neural network was hardcoded into a single kernel (including the determinant which was computed in a single thread in the same kernel!), and the reduction operations were very primitive "loop over all elements per thread", which don't map that well to GPU's. Finding the median of an array was annoying, and I didn't bother with making a sorting algorithm, so I just found the "approximate" median, and there are probably other things I forgot about.
 
 While this did perform extremely fast for small systems (like 2-4 electrons and small network), it scaled horribly for anything larger. From some point there is just not enough registers on the GPU's streaming multiprocessor (SM) to store the entire neural network state so you really need a smart and dynamic way to combine neural network operations together in kernels that optimally use groupshared memory, unless you want to performance to drop to nearly zero.
 
-Of course while I realized these problems exist - intially I thought I'd try to go forward with the old approach, and try to implement a somewhat more advanced optimization algorithm and maybe make it work *a bit* better. Since backpropagation would be so compicated for this model, I couldn't be bothered with writing it by hand in shaders - so I chose a more advanced evolution based algorithm - LM-MA-ES (Limited Memory Matrix Adaptation Evolution Strategies). It already required a lot of matrix operation I decided to make a small tensor library in C# for Unity.
+Of course while I realized these problems exist - intially I thought I'd try to go forward with the old approach, and try to implement a somewhat more advanced optimization algorithm and maybe make it work *a bit* better. Since backpropagation would be so compicated for this model, I couldn't be bothered with writing it by hand in shaders - so I chose a more advanced evolution based algorithm - LM-MA-ES (Limited Memory Matrix Adaptation Evolution Strategies). It already required a lot of matrix operation. And then I decided to make a small tensor library in C# for Unity.
 
 As you might have already guessed, it turned out to be the complete opposite of **"small"**, and it instead transformed into having a lot more tools and features than I originally anticipated (hello scope creeep 👋).
 
@@ -30,19 +30,24 @@ There are a lot of ideas I sometimes have witch are simply too bothersome to imp
   - [Second prototype](#second-prototype)
     - [Optimization and generation of the kernels](#optimization-and-generation-of-the-kernels)
     - [Algorithmic operations](#algorithmic-operations)
-    - [Tensor product fusion](#tensor-product-fusion)
+    - [Advanced kernel fusion](#advanced-kernel-fusion)
     - [Automatic differentiation](#automatic-differentiation)
     - [IR under the hood](#ir-under-the-hood)
 - [Python frontend](#python-frontend)
   - [Main code](#main-code)
   - [Host code](#host-code)
     - [Modules](#modules)
-  - [Visualization and inveractivity](#visualization-and-inveractivity)
+  - [Visualization and interactivity](#visualization-and-interactivity)
 - [Backends](#backends)
   - [Codegen](#codegen)
   - [Runtimes](#runtimes)
 - [So what can we do with this?](#so-what-can-we-do-with-this)
+  - [Simulations](#simulations)
+  - [Graphics](#graphics)
+  - [Basic machine learning](#basic-machine-learning)
 - [What's the performance compared to other tensor libraries?](#whats-the-performance-compared-to-other-tensor-libraries)
+  - [N-body simulation](#n-body-simulation)
+  - [MNIST with a convolutional network](#mnist-with-a-convolutional-network)
 - [Future improvements](#future-improvements)
 - [Conclusion](#conclusion)
 
@@ -94,7 +99,7 @@ def mandelbulb_sdf(pos, iter_num=mandelbulb_iter_num, power=mandelbulb_power):
 
 Usually, when hitting a performance bottleneck, you have to write a custom CUDA kernels, which is doable, but quite annoying, as it forces you to use separate environments, CUDA and Python.
 
-There are actually domain specific languages (DSLs) that make writing lower-lever code much nicer in python, like [Taichi](https://www.taichi-lang.org/) or [Nvidia's Warp](https://github.com/NVIDIA/warp), they are really nice for simulations or graphics, and Taichi is specifically fine tuned for high performance 1-3d simulation and even has a built in automatically optimized sparse grids. And while they are also differentiable, they still are a bit off from what I would consider "perfect", as you don't have all ML kind of operations, even though you can write them, there are some Nerf implementations for Taichi. You could also interoperate them with PyTorch for example, this once again makes is less nice to work with. There is also [Triton](https://github.com/triton-lang/triton), but it's usually used more like a backend for other libraries (like PyTorch) rather than a standalone DSL, at least as far as I have seen.
+There are actually domain specific languages (DSLs) that make writing lower-lever code much nicer in python, like [Taichi](https://www.taichi-lang.org/) or [Nvidia's Warp](https://github.com/NVIDIA/warp), they are really nice for simulations or graphics, and Taichi is specifically fine tuned for high performance physics simulations and even has built in automatically optimized sparse grids. And while they are also differentiable, they still are a bit off from what I would consider "perfect", as you don't have all ML kind of operations, even though you can write them, there are some Nerf implementations for Taichi. You could also interoperate them with PyTorch for example, this once again makes it less nice to work with. There is also [Triton](https://github.com/triton-lang/triton), but it's usually used more like a backend for other libraries (like PyTorch) rather than a standalone DSL, at least as far as I have seen.
 
 I also want to mention [Slang](https://github.com/shader-slang/slang), as its also a nice improvement over shaders given its added differentiability, and it would be nice if it was widely supported.
 
@@ -228,11 +233,11 @@ These simpler operations aren't yet put into kernels, so the compiler can do add
 
 (Though to be fair, right now, the compiler optimizes them a bit too aggressively, and can put a lot of needless computation inside a matmul loop for example, this needs to be fixed in the future with better heuristics)
 
-### Tensor product fusion
+### Advanced kernel fusion
 
 Kernel fusion by splitting into ranges of the multi-level linked list works fine until you get to more complex situations, that do actually happen quite often in ML, for example, reductions of some expressions. 
 
-To optimize even these cases you can do tensor product fusion - you replace a loading operation with the recomputed result of the load target with the given load indices replacing the target kernel indices.
+To optimize even these cases you can do something I call tensor load fusion - you replace a loading operation with the recomputed result of the load target with the given load indices replacing the target kernel indices.
 
 This was tricky to implement, but it allows to fuse operations like `tf.sum(A[i,k]*B[k,j], axis=2)` into a single 2D kernel, instead of 3D + 2D kernels. This gives a massive speedup in some cases when writing operations in such a naive way. This for example allows you to write out a conv2d operation in a similar form as a sum over a 7D tensor, and the compiler will fuse it into a single 4D kernel, while giving comparable performance to native pytorch. Here is an implementation in TensorFrost which is effectively equivalent to PyTorches conv2d without padding:
 
@@ -277,7 +282,6 @@ It does pose the question of what to do when doing a hybrid autodiff, like backw
 
 Let's look at how the IR looks in the compiler right now. We will look at the bitonic sort example at first to see how control flow is represented in the IR.
 
-{% raw %}
 <details>
 <summary>Parsed/traced input</summary>
 
@@ -367,7 +371,6 @@ int step = loop(inputs=[v1_14(0),steps,v1_13(1)], )
 
 </div>
 </details>
-{% endraw %}
 
 I made the debug IR representation be somewhat C-like since, at least for me, its easier to read than your usual IR representations. Every line here represents a node in the multilevel linked list. Each `{}` scope incapsulates all the child nodes of the previous to `{}` node. While the bitonic sort part is basically just a less readible version of the python code above, we now also have some additional nodes in the IR. Specifically `memory`, this is the node that represents allocated tensor memory on the device. Here we also see that it has flags signifying that its an output and input of the program. The `RemoveUnusedOperations` compilaiton stage removes everything that doesn't influence those memory nodes.
 
@@ -768,12 +771,12 @@ class SmolNet(tf.Module):
 ```
 
 When initializing the module you can add 3 types of TensorFrost accessible parameters:
-- `tf.Parameter` - a tensor that will be passed to the TensorProgram as an argument, can be trained
-- `tf.ParameterArray` - a dynamic list of parameters, all of them will be passed to the TensorProgram as arguments, can be trained
-- `tf.Module` - another module, all of its parameters will be passed to the TensorProgram as arguments, can be trained
+- `tf.Parameter` - a tensor that will be passed to the TensorProgram as an argument
+- `tf.ParameterArray` - a dynamic list of parameters, all of them will be passed to the TensorProgram as arguments
+- `tf.Module` - another module, all of its parameters will be passed to the TensorProgram as arguments
 
 The shape argument of the parameter can be a list of integers, where -1 means that the shape is not specified yet, and will be inferred from the input tensor. If you need to compute an operation over several tensors of unspecified shape, you need to assert the shapes in the `assert_parameters` function.
-`random_scale` and `random_offset` are used to initialize the weights with random values, and are optional, by default the weights are initialized with Xavier initialization for normal random values.
+`random_scale` and `random_offset` are used to initialize the weights with random values, and are optional, by default the weights are initialized with Xavier initialization for uniform random values.
 `requires_grad` is used to specify if the parameter should be trained or not, by default all parameters are trainable. This argument does not stop you from computing `tf.grad` manually, it is just used to specify if the parameter should be updated by the optimizer module.
 
 By itself the module does not do anything, you need to do a second initialization step to either use it inside a TensorProgram, or initialize it as a container for the tensors outside of the program.
@@ -800,13 +803,10 @@ X = tf.tensor(np.zeros([100, 100], dtype=np.float32))
 Y = forward(model_container, X)
 ```
 
-`model.initialize_input()` creates put `tf.input()` tensors for all the parameters of the module. Afterwards `assert_parameters` is automatically called for this and all child modules. This is useful if you want to use the module inside a TensorProgram, as you can just pass the module as an argument to the compiled function, and all the parameters will be automatically created and the shapes will be asserted.
+`model.initialize_input()` creates `tf.input()` tensors for all the parameters of the module. Afterwards `assert_parameters` is automatically called for this and all child modules. This is useful if you want to use the module inside a TensorProgram, as you can just pass the module as an argument to the compiled function, and all the parameters will be automatically created and the shapes will be asserted.
 `model.initialize_parameters()` creates `tf.tensor()` tensors for all the parameters of the module and initializes them with random values. This is useful if you want to use the module outside of a TensorProgram, as you can just pass the module as an argument to the compiled function.
 
-You can not, however, do both at the same time, as the module will not know if it is used inside or outside of a TensorProgram.
-
-
-## Visualization and inveractivity
+## Visualization and interactivity
 
 I really wanted a way to output computation results in real time so I decided to add a GLFW + ImGui for a window and simple GUI to the library. The way it works now is that you can create a window, create the main rendering loop, and then render the tensor as an image. You can do quite a lot of things with this. I've for example implemented 3D fractal path tracer, and a 2D fluid simulation, real time neural embedding texture visualization, etc.
 
@@ -852,10 +852,25 @@ In the future I plan to add a CUDA and Vulkan backend, and probably a WGPU one.
 
 # So what can we do with this?
 
+## Simulations
+
 Before all the algorithmic stuff I initially played around with simulations that map nicely to multidimensional arrays. For example, I implemented a 
 
+TODO: fluid sim video and screenshot
+
+## Graphics
+
+TODO: Path tracer
+
+## Basic machine learning
+
+TODO: mnist, texture embedder
 
 # What's the performance compared to other tensor libraries?
+
+## N-body simulation
+
+## MNIST with a convolutional network
 
 # Future improvements
 
