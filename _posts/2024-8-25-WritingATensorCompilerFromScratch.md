@@ -18,21 +18,22 @@ So ideally, if I make a new library - it should be at least able to make all the
 - [Architecture](#architecture)
   - [Kernel fusion](#kernel-fusion)
   - [First prototype](#first-prototype)
-  - [Second prototype and its IR](#second-prototype-and-its-ir)
-  - [Optimization and generation of the kernels](#optimization-and-generation-of-the-kernels)
-  - [Algorithmic operations](#algorithmic-operations)
-  - [Tensor product fusion](#tensor-product-fusion)
-  - [Automatic differentiation](#automatic-differentiation)
-  - [IR under the hood](#ir-under-the-hood)
+  - [Second prototype](#second-prototype)
+    - [Optimization and generation of the kernels](#optimization-and-generation-of-the-kernels)
+    - [Algorithmic operations](#algorithmic-operations)
+    - [Tensor product fusion](#tensor-product-fusion)
+    - [Automatic differentiation](#automatic-differentiation)
+    - [IR under the hood](#ir-under-the-hood)
 - [Python frontend](#python-frontend)
   - [Main code](#main-code)
   - [Host code](#host-code)
+    - [Modules](#modules)
   - [Visualization and inveractivity](#visualization-and-inveractivity)
 - [Backends](#backends)
   - [Codegen](#codegen)
   - [Runtimes](#runtimes)
 - [So what can we do with this?](#so-what-can-we-do-with-this)
-- [Whats the performance compared to, for instance, PyTorch?](#whats-the-performance-compared-to-for-instance-pytorch)
+- [What's the performance compared to other tensor libraries?](#whats-the-performance-compared-to-other-tensor-libraries)
 - [Future improvements](#future-improvements)
 - [Conclusion](#conclusion)
 
@@ -83,7 +84,7 @@ Adding the problem of exponentially growing number of possible operation fusions
 
 I also wanted to have at least some sort of control flow, which is impossible to implement in a reasonable way here.
 
-## Second prototype and its IR
+## Second prototype
 
 I'll start with the famous quote:
 
@@ -153,7 +154,7 @@ I had [one specific case](https://github.com/MichaelMoroz/TensorFrost/blob/main/
 This shows that, while powerful, such inference of how the program is structured does not always work, or requires a much more advanced compiler than I have here.
 On the other hand, in the case of [the 2D fluid simulation example](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/fluid_simulation.ipynb), kernel generation worked quite well, since there is no control flow to confuse the compiler.
 
-## Optimization and generation of the kernels
+### Optimization and generation of the kernels
 
 Simply splitting the IR into kernel regions is actually not enough to make sure you dont have a million unneeded loads or stores. One very basic way to optimize the kernels is effectively just copying computations that are cheaper to do than to load. Such things like constants, or very simple arithmetic are examples of this. Doing this optimization not only reduces the number of global memory access a lot usually, but also removes a lot of unneeded kernels that would have just stored a constant or something similar into memory.
 
@@ -161,7 +162,7 @@ I also have the basic standard "removing of unused operations" here. Since we ha
 
 When generating compute kernels out of such an IR, you can not simply use the N dimensional shape of the kernel, and you need to map the tensor indices to the specific layout of the GPU. In this case, thats the group indices, and the workgroup thread indices (in more advanced cases, in DX12/Vulkan/CUDA/etc there is also the warp sub-group, but I'll ignore it for now). To do this mapping we ideally would need to figure out the shape of the workgroup, which must be a compile time constant, from the computations we do. But at the moment I simply estimate the group shape from the last 3 dimensions of the kernel, and clamp them to some predefined constants depending on dimensionality. This is suboptimal, but doing it better would either require having a VM that estimates the range of indices of memory accesses, or an autotuner. The first will take some time to implement, and is in my TODO list, as its also useful for other things, and the second, while easier I'm currenty not considering, as it could increase compile times quite significantly.
 
-## Algorithmic operations
+### Algorithmic operations
 
 The bare IR does not know about complex operations like matrix multiplication, reductions, etc. These are implemented as a special compiler pass, that converts the high level operation nodes into a series of simpler operations. For example reduction sums `tf.sum` are converted into a loop of adds, matrix multiplications into a loop of muls and adds, etc. 
 
@@ -169,7 +170,7 @@ These simpler operations aren't yet put into kernels, so the compiler can do add
 
 (Though to be fair, right now, the compiler optimizes them a bit too aggressively, and can put a lot of needless computation inside a matmul loop for example, this needs to be fixed in the future with better heuristics)
 
-## Tensor product fusion
+### Tensor product fusion
 
 Kernel fusion by splitting into ranges of the multi-level linked list works fine until you get to more complex situations, that do actually happen quite often in ML, for example, reductions of some expressions. 
 
@@ -187,7 +188,7 @@ def conv2d(X, W):
 ```
 At the moment only the first `tf.sum(some indexed operations)` gets fused into a single kernel. Which is actually completely fine, as we dont want to merge multiple `sum` together and we want them to be staged. This is actually why I manually fused the kernel dimensions `w` and `h` together, as you need to have a balance between the size of the loop and number of reduction stages. This could theoretically be done automatically, but it would require autotune or more advanced heuristics. 
 
-## Automatic differentiation
+### Automatic differentiation
 
 Looking at the example in the section above you might think that autograd would completely fail when differentiating such an expression. Which would be the case if done naively. Whats worse, in the programs I write, loads at addresses are extremely prelevant. If you apply autodiff dirrectly on multidimensional loads you get multidimensional atomic adds. In general, you can't really do much with them, but in most cases, the indices of the atomic adds are simple, or are constants. 
 In those cases you could check what dimension indices of the operation are not used in the atomic add address computation, and conclude that all threads of this atomic add for this dimension add to the same element. This would mean that we can optimize this by transforming this dimension into a sum over it, with a following atomic add to this element in the end. Even more, you could also check if the indices map 1 to 1, meaning that they do not make conflicting writes, and can just be replaced with a simple store operation. (However, I don't actually do this at the moment as nonconflicting atomic adds are cheap enough to be ignored for now)
@@ -212,7 +213,7 @@ I still plan to implement forward mode automatic differentiation, in its case it
 
 It does pose the question of what to do when doing a hybrid autodiff, like backward grad of forward grad. In that case the gradients need to be sorted by their order, and done one by one. Unfortunately in this case I would need to implement full jacobian vector product (JVP) (on top of the VJP's) for all algorithm operations, not just the base simple non-algorithmic ones, so I'll probably leave that for the far future.
 
-## IR under the hood
+### IR under the hood
 
 Let's look at how the IR looks in the compiler right now. We will look at the bitonic sort example at first to see how control flow is represented in the IR.
 
@@ -593,11 +594,169 @@ As this library is effecitively a static compiler, the way you use it is split i
 
 ## Main code
 
+You basically define a function that looks like this:
+
+```py
+def matmul():
+    A = tf.input([-1, -1], tf.float32)
+    N, M = A.shape
+    B = tf.input([-1,  M], tf.float32)
+    K = B.shape[1]
+
+    C = (tf.sin(A) @ tf.cos(B.T))**2.0
+
+    return C
+```
+
+This will be the core of our TensorProgram. You probably noticed that it doesn't have arguments, right now its a rather ad-hoc way to give the ability to restrict shapes of some inputs to other inputs. Technically I could just parse the function python representation and generate `tf.input()` automatically, but in either case, you will still need to apply `tf.assert_tensor` to enforce their shape. 
+
+You are probably already asking why its done is such a weird way, but the main goal was the ability to have undefined tensor shapes at compile time, this way you don't need to recompile the program every time your input changes. This as you can see does add some restrictions, since if you don't do these shape `assertions` the compiler might not be able to figure out that A and B can actually be multiplied together and will throw an error, for example. I could have gone with the "assume everything is compatible" route and added assertions in the generated IR automatically before applying the operation, but I suspected such behavour might have very annoying unintended behaviours and could also result in fusion of parts of code that shouldn't have, which would either be wrong, or create assertions that might never be valid and always throw errors. Of course, you can still have the shapes as constants everywhere, in that case this becomes rather annoying to work with. I suspect that in the future I'll add support for both automatically reading the function arguments and manual specification like here.
+So yeah, the input shape of these `tf.input()` operations can be `-1` for unspecified, and `>0` for explicitly specified. In some cases having explicit shape might improve performance, as the compiler could do staged reductions and the like.
+
+The way the IR is currently generated is by tracing the python function, which is significantly easier than parsing python AST. This does have some interesting side effects. If you do any sort of control flow inside this function, you can only do it with python values, and on top of that, the result will be unrolled and fixed at compile time. 
+
+In fact, all variables, N, M, A, B, etc - are not actual tensors, but abstractions in the IR, and don't have a value yet. So doing any kind of print would result in abstract info being spat out, and conversion into Numpy or any other python type would simply be impossible.
+
+As I wanted to have control flow in the IR, I either needed to parse Python AST, or somehow overload existing Python behavour. Initially, all scoped operations, like `if` or `loop` took a python function as input, which was quite ugly and very unreadable for deep code. But then I discovered that you can actually overload context manager behavour. I found this trick in [a library for python based shader generation](https://github.com/ppenenko/metashade). This means that I can have custom calls at the beginning and end of a section of code, and I could automatically put it as a child scope.
+This is what I did, and I overloaded these for some tensor types, so now you can do contol flow in nicer way! (Arguably still cursed, since now we have 2 ways to make control flow, with different results)
+
+```py
+with tf.if_cond(A == B):
+  #stuff
+
+with tf.loop(begin, end, step) as iteration:
+  #stuff
+
+```
+
+I even used them for custom kernel declaration:
+
+```py
+with tf.kernel([M, N, K]) as (i,j,k):
+  #stuff
+```
+
 ## Host code
+
+After you wrote the main function you can compile it into a `TensorProgram` like this
+
+```py
+matmul_compiled = tf.compile(matmul)
+```
+
+The `TensorProgram` objects take and output tensor memory buffers, which can be created from numpy arrays:
+```python
+A = tf.tensor(np.zeros([100, 100], dtype=np.float32))
+B = tf.tensor(np.zeros([100, 100], dtype=np.float32))
+```
+
+Then you can run the program:
+```python
+A, B = wave_eq(A, B)
+```
+As you can see the inputs are given to the compiled function in the same order as they are created in the function.
+
+To get the result back into a numpy array, you can use the `numpy` property:
+```python
+Anp = A.numpy
+```
+
+### Modules
+
+TensorFrost has a simple module system similar to PyTorch, where you can define a module with trainable parameters and a forward function that computes the output of the module as well as a loss function. 
+
+```python
+class SmolNet(tf.Module):
+    def __init__(self):
+        #specify a custom random scale and offset for the weights when initializing
+        self.W = tf.Parameter([16, -1], tf.float32, random_scale=0.01, random_offset=0.0)
+        #dont compute gradients for the bias
+        self.b = tf.Parameter([-1], tf.float32, requires_grad=False)
+        
+    def assert_parameters(self):
+        #makes sure that the compiler knows that b has shape compatible with W
+        self.b = tf.assert_tensor(self.b, [self.W.shape[1]], tf.float32)
+        
+    def forward(self, x):
+        return x @ self.W + self.b
+    
+    def loss(self, x, y):
+        y_pred = self.forward(x, y)
+        return tf.mean((y - y_pred)**2)
+```
+
+When initializing the module you can add 3 types of TensorFrost accessible parameters:
+- `tf.Parameter` - a tensor that will be passed to the TensorProgram as an argument, can be trained
+- `tf.ParameterArray` - a dynamic list of parameters, all of them will be passed to the TensorProgram as arguments, can be trained
+- `tf.Module` - another module, all of its parameters will be passed to the TensorProgram as arguments, can be trained
+
+The shape argument of the parameter can be a list of integers, where -1 means that the shape is not specified yet, and will be inferred from the input tensor. If you need to compute an operation over several tensors of unspecified shape, you need to assert the shapes in the `assert_parameters` function.
+`random_scale` and `random_offset` are used to initialize the weights with random values, and are optional, by default the weights are initialized with Xavier initialization for normal random values.
+`requires_grad` is used to specify if the parameter should be trained or not, by default all parameters are trainable. This argument does not stop you from computing `tf.grad` manually, it is just used to specify if the parameter should be updated by the optimizer module.
+
+By itself the module does not do anything, you need to do a second initialization step to either use it inside a TensorProgram, or initialize it as a container for the tensors outside of the program.
+
+```python
+
+def ComputeForward():
+    model = SmolNet()
+    #creates tf.input tensors from all the parameters of the module
+    model.initialize_input()
+    X = tf.input([-1, -1], tf.float32)
+    return model.forward(X)
+
+forward = tf.compile(ComputeForward)
+
+model_container = SmolNet()
+#creates tf.tensor tensors from all the parameters of the module and initializes them
+model_container.initialize_parameters()
+#you can change them afterwards too
+model_container.W = tf.tensor(np.zeros([16, 100], dtype=np.float32))
+
+X = tf.tensor(np.zeros([100, 100], dtype=np.float32))
+#the module is passed as an argument to the compiled function, in the same order as they are created in the function
+Y = forward(model_container, X)
+```
+
+`model.initialize_input()` creates put `tf.input()` tensors for all the parameters of the module. Afterwards `assert_parameters` is automatically called for this and all child modules. This is useful if you want to use the module inside a TensorProgram, as you can just pass the module as an argument to the compiled function, and all the parameters will be automatically created and the shapes will be asserted.
+`model.initialize_parameters()` creates `tf.tensor()` tensors for all the parameters of the module and initializes them with random values. This is useful if you want to use the module outside of a TensorProgram, as you can just pass the module as an argument to the compiled function.
+
+You can not, however, do both at the same time, as the module will not know if it is used inside or outside of a TensorProgram.
+
 
 ## Visualization and inveractivity
 
-Since I really wanted a way to output computation results in real time I decided to add a GLFW window + ImGui interface to the library. The way it works now is that you can create a window, create the main rendering loop, and then do `tf.render_image(tensor)` to render the tensor as an image. You can do quite a lot of things with this. I've for example implemented 3D fractal path tracer, and a 2D fluid simulation, real time neural embedding texture visualization, etc.
+I really wanted a way to output computation results in real time so I decided to add a GLFW + ImGui for a window and simple GUI to the library. The way it works now is that you can create a window, create the main rendering loop, and then render the tensor as an image. You can do quite a lot of things with this. I've for example implemented 3D fractal path tracer, and a 2D fluid simulation, real time neural embedding texture visualization, etc.
+
+```python
+#creates a single global window (can only be one at the moment)
+tf.window.show(1280, 720, "a window")
+
+while not tf.window_should_close(): #window will close if you press the close button and this will return True
+    mx, my = tf.get_mouse_position()
+    wx, wy = tf.get_window_size()
+
+    #simple input example
+    if tf.window.is_mouse_button_pressed(tf.window.MOUSE_BUTTON_0):
+        tf.imgui.text("Mouse button 0 is pressed")
+
+    if tf.window.is_key_pressed(tf.window.KEY_W):
+        tf.imgui.text("W is pressed")
+
+    #ImGui example
+    tf.imgui.begin("an imgui window")
+    tf.imgui.text("some text")
+    value = tf.imgui.slider("slider", value, 0.0, 10.0)
+    if(tf.imgui.button("a button")):
+        print("button pressed")
+    tf.imgui.end()
+
+    #exectute a tensorfrost program that outputs a [-1, -1, 3] float32 tensor
+    img = render_image(...)
+
+    #display the image (will be stretched to the window size with nearest neighbor interpolation)
+    tf.render_frame(img)
+```
 
 # Backends 
 
@@ -614,7 +773,7 @@ In the future I plan to add a CUDA and Vulkan backend, and probably a WGPU one.
 Before all the algorithmic stuff I initially played around with simulations that map nicely to multidimensional arrays. For example, I implemented a 
 
 
-# Whats the performance compared to, for instance, PyTorch?
+# What's the performance compared to other tensor libraries?
 
 # Future improvements
 
@@ -626,7 +785,11 @@ Kernels can be additionally fused at the workgroup level as a post compilation p
 
 Another thing that is perhaps very high in the priority list right now is to implement repeating computation eliminator, its quite troublesome to implement due to requiring some way to compare entire computation chains (by making a specific computation result node have a unique number), but would remove quite a lot of redundant cruft from the generated kernels.
 
-One nice thing, that I would like to borrow from JAX is `vmap`. Writing particle simulations in vectorized form often annoyingly require a lot of `squeeze` and `unsqueeze` operations, which could be automated, if you vectorized a single particle calculation into a target shape. In fact, I could also make the explicit `kernel` node usage assume that all its children are scalar (if not - unroll), and it would also behave similarly to `vmap` with the expection of it forcibly creating a single kernel no matter what. Implementing `vmap` is, I supect, not to difficult, as it only requires padding all the shapes of the child operation with the given shape (with some peculiarities). Syntactically it could look like `with tf.vmap(shape) as i,j,...:`, with i,j,k being scalar at trace time, then padded with given shape.
+One nice thing, that I would like to borrow from JAX is `vmap`. Writing particle simulations in vectorized form often annoyingly require a lot of `squeeze` and `unsqueeze` operations, which could be automated, if you vectorized a single particle calculation into a target shape. In fact, I could also make the explicit `kernel` node usage assume that all its children are scalar (if not - unroll), and it would also behave similarly to `vmap` with the expection of it forcibly creating a single kernel no matter what. Implementing `vmap` is, I supect, not to difficult, as it only requires padding all the shapes of the child operation with the given shape (with some peculiarities). Syntactically it could look like `with tf.vmap(shape) as (i,j,...):`, with i,j,k being scalar at trace time, then padded with given shape.
+
+I suspect LLVM could still be put at the end of my compilation stages as an intermediate between final code generation, to do some final optimizations.
+
+Also, this really needs a documention page, and I definitely need to create one sooner rather than later.
 
 # Conclusion
 
