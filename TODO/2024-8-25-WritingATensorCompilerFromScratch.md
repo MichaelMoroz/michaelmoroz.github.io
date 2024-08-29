@@ -1,3 +1,9 @@
+---
+layout: post
+title: Writing a tensor compiler from scratch 
+image: ShadertoyParticles.png
+---
+
 A bit more than a year ago from when this blog post has been published, when I was working on neural variational monte carlo (NVMC) in Unity it became painfully clear that working on any Machine Learning, let alone of this kind - is simply a no go without the required tools. To make it even remotely work I needed to cut a lot of corners which were making the project quite useless apart from being a good learning experience and working on small models. Instead of using backpropagation I needed to use evolution strategies (ES), the neural network was hardcoded into a single kernel, and the reduction operations were very primitive "loop over all elements per thread", which don't map that well to GPU's.
 While this did in fact perform extremely fast for small systems (like 2-4 electrons), it scaled horribly for anything larger. From some point there is just not enough registers on the GPU to store the entire neural network state (including the determinant which was singlethreaded!) so you really need a smart and dynamic way to combine neural network operations together in kernels that optimally use groupshared memory.
 Of course while I realized these problems exist - intially I thought I'd try to go forward with the old approach, and try to implement a somewhat more advanced optimization algorithm. Since I still didn't have backpropagation, and couldn't be bothered writing it by hand - I chose a more advanced evolution based algorithm - LM-MA-ES (Limited Memory Matrix Adaptation Evolution strategies). It already required a lot of matrix operation I decided to make a small tensor library in C# for Unity.
