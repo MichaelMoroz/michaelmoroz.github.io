@@ -108,7 +108,7 @@ When I initally started prototyping the operation graph compiler in C# in Unity 
 
 This was the operation/kernel cluster graph for this fluid simulation: 
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/gRZzMPo1RLg?si=UfZ9HGTNYV51tBtn" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+<center><iframe width="560" height="315" src="https://www.youtube.com/embed/gRZzMPo1RLg?si=UfZ9HGTNYV51tBtn" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
 
 It did work, unfortunately there was no good way to procedurally generate shader code in Unity, so I did something rather stupid and implemented a Virtual Machine right in the shader, which made it particularly slow. However, of the good things, there was practically 0 compile time, but unforuntately that not very interesting to me. The way I did reductions to get the average energy here was also rather questionable - I did it with atomics. For some cases they are good, but reduction is not one of them. Especially given that there are no natively supported float atomics in HLSL, so you need to emulate them through `InterlockedExchangeCompare`, which makes it even slower for this particular use case. One time it even crashed my computer when trying to add a few million floats in parallel to a single location.
 
@@ -118,11 +118,11 @@ At this point the graph was quite simple, and I implemented backward-mode autodi
 
 Another thing that turned out to be a huge problem was that the operation graph did not have a "stable" order, it was only topologically sorted, which is good for normal operations, but for inplace operations like stores and atomics this leads to randomly varying results, which is a no-go.
 
-Adding the problem of exponentially growing number of possible operation fusions and the graphs quicky became undebuggable node soup making this approach not usable:
+Adding the problem of exponentially growing number of possible operation fusions and the graphs quicky became undebuggable node soup making this approach not very appealing:
 
 <center><img src="{{ site.baseurl }}/images/wtf.png" height="400px"></center>
 
-I also wanted to have at least some sort of control flow, which wasn't ovious how to add into this specific graph.
+I also wanted to have at least some sort of control flow, which wasn't ovious how to add into this specific graph for me at the time.
 
 ## Second prototype
 
@@ -139,7 +139,7 @@ In multi-level linked lists kernel fusion becomes slightly more tricky, but effe
 
 The kernels are effectively also represented in the same IR, as children of a "kernel" node. At the code generation stage, everything outside of the kernel nodes is converted into host code, and the kernels are converted into device code. This way the entire program is represented in a single IR, and the compiler can optimize the entire program globally.
 
-Since the IR is the same for all compilation stages, you could for example input both high level tensor operations and explicitly specified kernels, which is our goal, and can already be done now, like here:
+Since the IR is the same for all compilation stages, you could for example input both high level tensor operations and explicitly specified kernels, and can already be done now like here:
 
 ```py
 A = tf.input([-1, -1], tf.float32)
@@ -153,7 +153,9 @@ with tf.kernel(A.shape) as (i, j):
 C = (C @ A.T) + tf.unsqueeze(tf.sum(tf.sin(B @ A),axis=-1),axis=-1)
 ```
 
-(Note: that of course, if you tried to compute the gradient here, the compiler would fail, at least at this point in time, as general gradients over control flow are not trivial)
+This is already quite nice.
+
+*(Note: of course, if you tried to compute the gradient here, the compiler would fail, at least at this point in time, as general gradients over control flow are not trivial)*
 
 Another interesting aspect of this representation is that kernels can be created as children of control flow nodes, meaning you can create a loop of kernels for an iterative algorithm, like for example a bitonic sort!
 
@@ -164,15 +166,12 @@ sort_id = tf.indices([Nround/2])[0]
 steps = tf.int(log2N*(log2N + 1.0)/2.0)
 
 with tf.loop(steps) as step:
-    def getBitonicElementPair(id, step):
-        j = tf.floor(tf.sqrt(tf.float(2*step) + 1.0) - 0.5)
-        n = tf.round(tf.float(step) - 0.5*j*(j+1.0))
-        B = tf.int(tf.round(tf.exp2(j-n)))
-        mask = tf.select(n < 0.5, 2*B - 1, B)
-        e1 = id%B + 2*B*(id/B)
-        e2 = e1 ^ mask
-        return e1, e2
-    e1, e2 = getBitonicElementPair(sort_id, step)
+    j = tf.floor(tf.sqrt(tf.float(2*step) + 1.0) - 0.5)
+    n = tf.round(tf.float(step) - 0.5*j*(j+1.0))
+    B = tf.int(tf.round(tf.exp2(j-n)))
+    mask = tf.select(n < 0.5, 2*B - 1, B)
+    e1 = sort_id%B + 2*B*(sort_id/B)
+    e2 = e1 ^ mask
 
     with tf.if_cond((e1 < element_count) & (e2 < element_count)):
         key1, key2 = keys[e1], keys[e2]
@@ -187,7 +186,7 @@ with tf.loop(steps) as step:
 
 In this case the compiler can spot that you can't fuse the insides of the loop since they are reading and writing from the same memory, thus creating a kernel region under the loop.
 
-However, while you can do that, in this particular case, I woudn't recommend relying on the compiler too much, and would put an explicit kernel under the loop, since even changing the loading order from before the stores, to the middle, will split the kernel in 2 and potentially break it.
+However, while you can do that, in this particular case, I woudn't recommend relying on the compiler too much, and would put an explicit kernel under the loop, since even changing the loading order from before the stores, to the middle, will split the kernel in 2 and potentially break it right now.
 
 I had [one specific case](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/n-body.ipynb) when it was an issue when I tried to optimize a software sphere rasterizer, by adding an additional read to check if the atomic min is required I effectively made the compiler think that this part of the code needs to be split into parts and simply just broke the rendering.
 
@@ -198,7 +197,7 @@ On the other hand, in the case of [the 2D fluid simulation example](https://gith
 
 Simply splitting the IR into kernel regions is actually not enough to make sure you dont have a million unneeded loads or stores. One very basic way to optimize the kernels is effectively just copying computations that are cheaper to do than to load. Such things like constants, or very simple arithmetic are examples of this. Doing this optimization not only reduces the number of global memory access a lot usually, but also removes a lot of unneeded kernels that would have just stored a constant or something similar into memory.
 
-I also have the basic standard "removing of unused operations" here. Since we have the entire IR graph from input to ouput given, this additionally allows to figure out which parts of the computation are influencing the outputs. So I can effectively assume that everything else is unused and can be simply removed. (TODO: fix bug when doing inplace operation on input that is not returned as output)
+I also have the standard "removing of unused computation" here. Since we have the entire IR graph from input to ouput given, this additionally allows to figure out which parts of the computation are influencing the outputs. So I can effectively assume that everything else is unused and can be simply removed. (TODO: fix bug when doing inplace operation on input that is not returned as output)
 
 When generating compute kernels out of such an IR, you can not simply use the N dimensional shape of the kernel, and you need to map the tensor indices to the specific layout of the GPU. In this case, thats the group indices, and the workgroup thread indices (in more advanced cases, in DX12/Vulkan/CUDA/etc there is also the warp sub-group, but I'll ignore it for now). To do this mapping we ideally would need to figure out the shape of the workgroup, which must be a compile time constant, from the computations we do. But at the moment I simply estimate the group shape from the last 3 dimensions of the kernel, and clamp them to some predefined constants depending on dimensionality. This is suboptimal, but doing it better would either require having a VM that estimates the range of indices of memory accesses, or an autotuner. The first will take some time to implement, and is in my TODO list, as its also useful for other things, and the second, while easier I'm currenty not considering, as it could increase compile times quite significantly.
 
@@ -238,12 +237,14 @@ These optimizations improve performance of automatically differentiated operatio
 The rest of the automatic gradient algorithm is your run-of-the-mill backwards mode autodiff. The autodiff pass is before the algorithm insertion pass, so the gradients are computed for high-level operations if possible as they are usually more numerically stable. (And also I don't have a way to compute gradients of control-flow at the moment, so it works as a substitute for that for now)
 
 Right now gradiets are specified like `tf.grad(a,b)`, and actually, `a` doesn't need to be a scalar, the default vector jacobian product (VJP) input is always a 1 no matter the dimensionality of a. This is useful, for instance, when computing gradients of a potential, for example:
+
 ```py
 dx = x1 - x2
 dist = tf.sqrt(tf.sum(dx**2))
 pot = 1.0 / dist
 force = - tf.grad(pot, dx)
 ```
+
 Quite nice when doing a particle simulation. In fact I also use this when computing the normals for the SDF in my path tracing example.
 Do note however, this is only valid behaviour because these computations are independent, for pixels, or for particles, if they were depending on each other, the gradient would be invalid, and in that case you should use a scalar `a`.
 
@@ -259,6 +260,8 @@ Let's look at how the IR looks in the compiler right now. We will look at the bi
 
 <details>
 <summary>Parsed/traced input</summary>
+
+
 
 ```cpp
 int v1_0 = const(data=[4294967295], )
