@@ -4,27 +4,24 @@ title: Writing a tensor compiler from scratch
 image: ShadertoyParticles.png
 ---
 
-A bit more than a year ago from when this blog post has been published, when I was working on neural variational monte carlo (NVMC) in Unity it became painfully clear that working on any Machine Learning, let alone of this kind - is simply a no go without the required tools. To make it even remotely work I needed to cut a lot of corners which were making the project quite useless apart from being a good learning experience and working on small models. Instead of using backpropagation I needed to use evolution strategies (ES), the neural network was hardcoded into a single kernel, and the reduction operations were very primitive "loop over all elements per thread", which don't map that well to GPU's.
+In this blog post I want to talk about the development of a library that I started working on more than a year ago -  [TensorFrost](https://github.com/MichaelMoroz/TensorFrost). Under the hood it's a static optimizing tensor compiler with a focus on being able to do more "shader-like" things while still having the ability to do high level linear algebra for ML in numpy-like syntax.
 
-While this did in fact perform extremely fast for small systems (like 2-4 electrons), it scaled horribly for anything larger. From some point there is just not enough registers on the GPU to store the entire neural network state (including the determinant which was singlethreaded!) so you really need a smart and dynamic way to combine neural network operations together in kernels that optimally use groupshared memory.
+I started working on it 14 months ago, when I was working on neural variational monte carlo (NVMC) in Unity - it became obvious that Machine Learning, let alone of this kind, is simply a no go without the required tools. To make it even remotely work I needed to cut a lot of corners. Instead of using backpropagation I used evolution strategies (ES), the neural network was hardcoded into a single kernel (including the determinant which was computed in a single thread in the same kernel!), and the reduction operations were very primitive "loop over all elements per thread", which don't map that well to GPU's. Finding the median of an array was annoying, and I didn't bother with making a sorting algorithm, so I just found the "approximate" median, and there are probably other things I forgot about.
 
-Of course while I realized these problems exist - intially I thought I'd try to go forward with the old approach, and try to implement a somewhat more advanced optimization algorithm. Since I still didn't have backpropagation, and couldn't be bothered writing it by hand - I chose a more advanced evolution based algorithm - LM-MA-ES (Limited Memory Matrix Adaptation Evolution Strategies). It already required a lot of matrix operation I decided to make a small tensor library in C# for Unity.
+While this did perform extremely fast for small systems (like 2-4 electrons and small network), it scaled horribly for anything larger. From some point there is just not enough registers on the GPU's streaming multiprocessor (SM) to store the entire neural network state so you really need a smart and dynamic way to combine neural network operations together in kernels that optimally use groupshared memory, unless you want to performance to drop to nearly zero.
 
-As you might have already guessed, it turned out to be the complete opposite of **"small"** and resulted in [TensorFrost](https://github.com/MichaelMoroz/TensorFrost): a statically compiling tensor library with focus on being more "shader-like" than other similar libraries, but still being high level enough to do your "ML-like" things.
+Of course while I realized these problems exist - intially I thought I'd try to go forward with the old approach, and try to implement a somewhat more advanced optimization algorithm and maybe make it work *a bit* better. Since backpropagation would be so compicated for this model, I couldn't be bothered with writing it by hand in shaders - so I chose a more advanced evolution based algorithm - LM-MA-ES (Limited Memory Matrix Adaptation Evolution Strategies). It already required a lot of matrix operation I decided to make a small tensor library in C# for Unity.
 
-<details><summary>TensorFrost?</summary><p>
-The name was chosen from "tensor" + my surname translated from Ukrainian to English. I know, its not super creative, given how many TensorSomething already exist. Also there is the funny problem that LLM's mistakingly assume its TensorFlow. Perhaps I should do `import TensorFrost as fr` instead of `as tf` in my examples.
-</p></details>
+As you might have already guessed, it turned out to be the complete opposite of **"small"**, and it instead transformed into having a lot more tools and features than I originally anticipated (hello scope creeep 👋).
 
----
+The thing is, this [isn't](https://github.com/MichaelMoroz/TensorCL) the first time I tried to make a tensor library. That one I did in OpenCL a whole 5 years ago, when I was still in the 3rd year of uni. At that point I didn't really know how to do kernel fusion or any other compiler-like optimization techniques so in the end I dropped the project since there wasn't anything particularly useful you could do with it (and I had no clue how to debug issues there). It did have backwards mode autodifferentiation that used a operation tape, but the performance of doing every operation one kernel at a time was just too bad for the stuff I usually do.
+(Interestingly enough, the initial reason I started working on it was quite similar to the one for making this new library, I wanted to implement a neural potential energy surface for modelling molecules)
 
-The thing is, this [isn't](https://github.com/MichaelMoroz/TensorCL) the first time I tried to make a tensor library. The first one I did in OpenCL a whole 5 years ago when I was still in the 3rd year of uni. At that point I didn't really know how to do kernel fusion or any other compiler-like optimization techniques so in the end I dropped the project since there wasn't anything particularly useful you could do with it (also you could just die from the bug infestation it had). It did have backwards mode autodifferentiation implemented by using a operation tape, but the performance of doing every operation one kernel at a time was just too bad for the stuff I usually do.
-(Interestingly enough, the reason I started working on it was quite similar to the one right now, I wanted to implement a neural potential energy surface for modelling molecules, specifically ZnO clusters)
+This time I knew, if I wanted to make a library like that, the only way to keep it alive long enough is by making it useful for pet projects I often make. Like graphics, simulations, etc. If you've seen my [Shadertoy page](https://www.shadertoy.com/user/michael0884) - it is essentially what I'm talking about. And ideally, it should be at least able to work at similar performance. 
 
-This time I knew, if I wanted to make a library like that, the only way to keep it alive is by making it minimally useful for things that I'm good at. Like graphics, simulations, and other related pet project. If you've seen my [Shadertoy page](https://www.shadertoy.com/user/michael0884) - it is essentially what I'm talking about. Also some algorithms that I come up with are simply too bothersome to implement in pure shaders, so I almost never touched machine learning related stuff apart of some things that are simple enough to port to shaders, like some [really simple Neural Implicit Representations](https://www.shadertoy.com/view/DstGDX).
-So ideally, if I make a new library - it should be at least able to make all the things I do in Shadertoy at similar performance. 
+There are a lot of ideas I sometimes have witch are simply too bothersome to implement in pure shaders, so I almost never touched machine learning related stuff apart of some things that are simple enough to port to shaders, like some [really simple Neural Implicit Representations](https://www.shadertoy.com/view/DstGDX). So I hoped that this library would make it more reachable.
 
-> Before starting, I should say that the current state of the library is still far from being production ready, and at this point I would strongly recommend not to use this for any serious projects. Also given that this is pretty much my first time writing a compiler, there are probably both wrong architectural choices, as well as just simply wrong assumptions.
+> Disclaimer: I should say that the current state of the library is still far from being production ready, and at this point I would strongly recommend not to use this for any serious projects. Also given that this is pretty much my first time writing a compiler, there are probably both wrong architectural choices, as well as just simply wrong assumptions.
 
 - [The beggining of the end](#the-beggining-of-the-end)
 - [Architecture](#architecture)
@@ -51,16 +48,47 @@ So ideally, if I make a new library - it should be at least able to make all the
 
 # The beggining of the end
 
-When working with ML libraries - I'm bothered with its distinct disconnection from native GPU programming. While technically you can write any algorithm you want in plain tensors, depending on the number or complexity of operations - the performance might get terrible. When hitting a performance bottleneck, you usually have to write a custom CUDA kernel, which is doable, but quite annoying. There are differentiable lower-level domain specific languages (DSLs) like [Taichi](https://www.taichi-lang.org/) or [Nvidia's Warp](https://github.com/NVIDIA/warp), that give you the ability to write rather low-level code in Python, however as a result they lose the ability to write high-level tensor code. (There is also Triton, but it's usually used more like a backend for other libraries (like PyTorch) rather than a standalone DSL). I also want to mention [Slang](https://github.com/shader-slang/slang), as its also a nice improvement over shaders given its added differentiability, and it would be nice if its support was added into more places - but its still quite a low level language.
+Lets start with asking why would I even want a whole new library in the first place, this would take an insane amount of time to develop, why not use something that already exists?
 
-Another thing, given my experience in writing lots of shaders - the visualization options that are available in ML libraries are often hilariously bad. Usually it just ends up being a bunch of matplotlib plots, which are not only slow, if you want to render like hundreds of millions of points or an animation, but also not interactive. In the world of real-time graphics, you can render billions of points at 60fps, and you can interact with them in real time. Seeing the things you are working on in real time is quite useful for quick iteration, and I feel like this is something you miss in your classic ML libs, where the usual interaction you have with your model is staring at the loss graph for hours. But do take this with a grain of salt, since quite a few models are simply not visualizable in real time, and the ones that are, are usually not easy to interpret. This is mostly only applicable to the intersection of ML/Physics/Graphics, like NERFs, diffusion, neural implicit representations, etc. Though changing hyperparameters in real time and seeing its result on the training loss can also be interesting in general.
+Of course, nothing stops me using your usual ML libraries like PyTorch or JAX, but I really dislike their distinct disconnection from native GPU programming. These libraries effectively live in their own realm with their own rules and syntax, and hide some of the features the GPU has from the user, they have almost 0 crossover with how shaders operate. While technically you can write any algorithm you want in plain tensors, including graphics and simulations, depending on the number or complexity of operations - the performance might get terrible. The performance is actually not the only issue, control flow is quite annoying to express in these libraries, if even possible, as native loops for example, require doing absolutely cursed stuff like this in JAX: 
 
-On the other side, in the world of real-time simulations and graphics, I've written custom kernels for every specific algorithm something needed: radix sorts, multigrid poission equation solver, numerical integrators, etc. And when I'm prototyping or having a new idea how to optimize the algorithm globally, it can get annoying to make global changes in the code structure, since they usually require a partial rewrite, creating new kernels and so on, while in a high-level tensor library you can just change a few lines of code. 
+```py
+def factorial(n):
+    def cond_fun(state):
+        i, fact = state
+        return i < n
+
+    def body_fun(state):
+        i, fact = state
+        return i + 1, fact * (i + 1)
+
+    initial_state = (0, 1)
+    final_state = jax.lax.while_loop(cond_fun, body_fun, initial_state)
+    return final_state[1]
+```
+
+Such native loops are required if you want a varying iteration count for some operaiton, in simulations this could be, for example, a summing a force from a varying number of particle neighbors. From a purely ML standpoint, this isn't really a problem, since such cases practically never happen, and on top of that, gradients of such loops might potentially have atrocious performance (or might just be uncomputable if the loop can be infinite). 
+
+You could alternatively write a dynamic mask that will depend on the iteration, and unroll the loop, but this would simply be slower and less readable.
+
+Usually, when hitting a performance bottleneck, you have to write a custom CUDA kernels, which is doable, but quite annoying, as it forces you to use separate environments, CUDA and Python.
+
+There are actually domain specific languages (DSLs) that make writing lower-lever code much nicer in python, like [Taichi](https://www.taichi-lang.org/) or [Nvidia's Warp](https://github.com/NVIDIA/warp), they are really nice for simulations or graphics, and Taichi is specifically fine tuned for high performance 1-3d simulation and even has a built in automatically optimized sparse grids. And while they are also differentiable, they still are a bit off from what I would consider "perfect", as you don't have all ML kind of operations, even though you can write them, there are some Nerf implementations for Taichi. You could also interoperate them with PyTorch for example, this once again makes is less nice to work with. There is also [Triton](https://github.com/triton-lang/triton), but it's usually used more like a backend for other libraries (like PyTorch) rather than a standalone DSL, at least as far as I have seen.
+
+I also want to mention [Slang](https://github.com/shader-slang/slang), as its also a nice improvement over shaders given its added differentiability, and it would be nice if it was widely supported.
+
+There is also the annoying situation that the visualization options that are available in ML libraries are often hilariously bad. Usually you just end up making a bunch of matplotlib plots, which are not only slow, if you want to render like hundreds of millions of points or an animation, but also not interactive. (They are fine for papers tho)
+
+In the world of real-time graphics, you can render those points at 60fps, and you could even interact with them in real time. Seeing the things you are working on in real time is in some cases quite useful for quick iteration, and I feel like this is something you miss in your classic ML libs, where the usual interaction you have with your model - is staring at the loss graph for hours.
+
+Tho, while I am stating these things,quite a few models are simply not visualizable in real time, and the ones that are, are usually not easy to interpret. This is mostly only applicable to the intersection of ML/Physics/Graphics, like NERFs, diffusion, neural implicit representations, etc. Though changing hyperparameters in real time and seeing its result on the training loss can also be somewhat interesting, but you do need the model to be rather performant for that.
+
+On the other side, in the world of real-time simulations and graphics, I've written custom kernels for every specific algorithm something needed: radix sorts, multigrid poission equation solver, numerical integrators, etc. So when I'm prototyping or having a new idea how to optimize the algorithm globally, it can get annoying to make global changes in the code structure, since they usually require a partial rewrite, creating new kernels and so on, and I don't really see why this coundn't be automated from higher-level operations.
 
 In the end I was wondering: can I somehow combine the best of both worlds? 
 Being able to do both numpy-like operations while also doing more shader-like things in one place sounds somewhat impossible on paper, but I thought that maybe if you tuned the kernel generation algorithm to specifically be optimal for shader-like operation it might at least work for my use cases?
 
-And even if it is impossible, combining everything into a single language would be nice, becauce the GPU development infrastructure is very much disconnected from your usual CPU stuff, and to be quite honest - quite archaic, still stuck in 2010s. Because of that - you often can get code duplication both in shader languages and host languages.
+And even if it is impossible, combining everything into a single language would be nice, becauce the GPU development infrastructure is scattered all over the place and sometimes not even interoperable.
 
 # Architecture
 
@@ -76,7 +104,7 @@ When you start dealing with algorithms, like the ones I write in Shadertoy, you 
 
 When I initally started prototyping the operation graph compiler in C# in Unity (not exactly your typical place for a compiler prototype, I know), I kept the graph just as a simple Directed Acyclic Graph (DAG), where each node was a single operation with some tensor shape. When I began testing the kernel clustering even on simple physics or rendering, the clustering algorithm quickly started to get out of hand, as in the example below. 
 
-<img src="{{ site.baseurl }}/images/fluidgraph.png" height="192px">
+<center><img src="{{ site.baseurl }}/images/fluidgraph.png" height="400px"></center>
 
 This was the operation/kernel cluster graph for this fluid simulation: 
 
@@ -92,9 +120,9 @@ Another thing that turned out to be a huge problem was that the operation graph 
 
 Adding the problem of exponentially growing number of possible operation fusions and the graphs quicky became undebuggable node soup making this approach not usable:
 
-<img src="{{ site.baseurl }}/images/wtf.png" height="192px">
+<center><img src="{{ site.baseurl }}/images/wtf.png" height="400px"></center>
 
-I also wanted to have at least some sort of control flow, which is impossible to implement in a reasonable way here.
+I also wanted to have at least some sort of control flow, which wasn't ovious how to add into this specific graph.
 
 ## Second prototype
 
@@ -107,7 +135,7 @@ So the second prototype, the one that became TensorFrost, is basically just that
 Ordering the operations is not the only thing. To implement control flow I needed to have child and parent nodes while still keeping a uniquely specified ordering, I effectively implemented this as a multi-level linked list. This way operaitons controlled by a conditional statement or by loops become its children.
 In multi-level linked lists kernel fusion becomes slightly more tricky, but effectively its just a recursive process of finding the ranges of fusable operations starting from the lowest level of the list, and fusing them level by level.
 
-<img src="{{ site.baseurl }}/images/multilevel.png" height="192px">
+<center><img src="{{ site.baseurl }}/images/multilevel.png" height="300px"></center>
 
 The kernels are effectively also represented in the same IR, as children of a "kernel" node. At the code generation stage, everything outside of the kernel nodes is converted into host code, and the kernels are converted into device code. This way the entire program is represented in a single IR, and the compiler can optimize the entire program globally.
 
@@ -315,11 +343,11 @@ int step = loop(inputs=[v1_14(0),steps,v1_13(1)], )
 </details>
 
 
-I made the debug IR representation be somewhat C-like since, at least for me, its easier to read than your usual IR representations. Every line here represents a node in the graph. Each `{}` scope incapsulates all the child nodes of the previous to `{}` node. While the bitonic sort part is basically just a less readible version of the python code above, we now also have some additional nodes in the IR. Specifically `memory`, this is the node that represents actually allocated tensor memory. In this specific IR it also has flags signifying that its an output and input of the program. The `RemoveUnusedOperations` compilaiton stage removes everything that doesn't influence those memory nodes.
+I made the debug IR representation be somewhat C-like since, at least for me, its easier to read than your usual IR representations. Every line here represents a node in the multilevel linked list. Each `{}` scope incapsulates all the child nodes of the previous to `{}` node. While the bitonic sort part is basically just a less readible version of the python code above, we now also have some additional nodes in the IR. Specifically `memory`, this is the node that represents allocated tensor memory on the device. Here we also see that it has flags signifying that its an output and input of the program. The `RemoveUnusedOperations` compilaiton stage removes everything that doesn't influence those memory nodes.
 
-> Those of you who know about LLVM would probably question the choices made here, but in my case specifically I was interested in keeping the IR as close to the codegen target as possible, which are C++, CUDA, shading languages, or others. This IR doesn't really use single assignment form (SSA) or φ nodes, meaning modifications are not versioned. This does pose a problem for autodiff and makes optimization potentially harder, so I do have a compilation pass that can convert at least some in-place operations into versions of the original, in an ad-hoc way. I still need to do the same for `stores` and `scatters` too, since right now autodiff will usually compute the wrong gradients for these operations. I have a good reason why I dont want to version everything - it will potentially result in overly aggressive additional memory allocation (like imagine this sorting algorithm created a copied version of keys/values every iteration), and you would need to optimize for it separately. Of course this reasoning might be completely wrong, since I haven't really worked with LLVM and am not sure about how applicable it might be for my use cases.
+> Those of you who know about LLVM would probably question the choices made here, but in my case specifically I was interested in keeping the IR as close to the codegen target as possible, which are C++, CUDA, shading languages, or others. This IR doesn't really use single assignment form (SSA) or φ nodes, meaning modifications are not versioned. This does pose a problem for autodiff and makes optimization potentially harder, so I do have a compilation pass that can convert at least some in-place operations into versions of the original, in a rather ad-hoc way. I still need to do the same for `stores` and `scatters` too, since right now autodiff will usually compute the wrong gradients for these operations, as it doesn't use the correct version for the gradient, or actually, it simply doesn't have access to it, because it no longer exists in memory. I have a reason why I dont want to version everything - it will potentially result in overly aggressive additional memory allocation (like imagine this sorting algorithm created a copied version of keys/values every iteration), and you would need to optimize for it separately. But this reasoning could be completely wrong, since I haven't really worked with LLVM and am not sure about how applicable it might be for my use cases.
 
-After the all the compilation stages, the IR creates kernel nodes, replaces multidimensional indexing with 1D indexing, does some optimizations etc. 
+After the all the compilation stages, the IR creates kernel nodes, replaces multidimensional indexing with flattened 1D indexing, does some optimizations etc. 
 
 <details>
 <summary>Final compiled IR</summary>
@@ -811,4 +839,8 @@ Also, this really needs a documention page, and I definitely need to create one 
 Since this is already the 14th month since I've started working on this, the conclusion is simple, unless you have a year of free time - don't make a new machine learning library from scratch.
 In fact, while I'm nowhere near the "end" goal I have in mind, which is somewhat annoying, the current state of the compiler is quite promising and I will continue making things using it. 
 
+---
 
+<details><summary>TensorFrost?</summary><p>
+The name was chosen from "tensor" + my surname translated from Ukrainian to English. I know, its not super creative, given how many TensorSomething already exist. Also there is the funny problem that LLM's mistakingly assume its TensorFlow. Perhaps I should do `import TensorFrost as fr` instead of `as tf` in my examples.
+</p></details>
