@@ -371,12 +371,14 @@ int step = loop(inputs=[v1_14(0),steps,v1_13(1)], )
 
 I made the debug IR representation be somewhat C-like since, at least for me, its easier to read than your usual IR representations. Every line here represents a node in the multilevel linked list. Each `{}` scope incapsulates all the child nodes of the previous to `{}` node. While the bitonic sort part is basically just a less readible version of the python code above, we now also have some additional nodes in the IR. Specifically `memory`, this is the node that represents allocated tensor memory on the device. Here we also see that it has flags signifying that its an output and input of the program. The `RemoveUnusedOperations` compilaiton stage removes everything that doesn't influence those memory nodes.
 
-> Those of you who know about LLVM would probably question the choices made here, but in my case specifically I was interested in keeping the IR as close to the codegen target as possible, which are C++, CUDA, shading languages, or others. This IR doesn't really use single assignment form (SSA) or φ nodes, meaning modifications are not versioned. This does pose a problem for autodiff and makes optimization potentially harder, so I do have a compilation pass that can convert at least some in-place operations into versions of the original, in a rather ad-hoc way. I still need to do the same for `stores` and `scatters` too, since right now autodiff will usually compute the wrong gradients for these operations, as it doesn't use the correct version for the gradient, or actually, it simply doesn't have access to it, because it no longer exists in memory. I have a reason why I dont want to version everything - it will potentially result in overly aggressive additional memory allocation (like imagine this sorting algorithm created a copied version of keys/values every iteration), and you would need to optimize for it separately. But this reasoning could be completely wrong, since I haven't really worked with LLVM and am not sure about how applicable it might be for my use cases.
+*Those of you who know about LLVM would probably question the choices made here, but in my case specifically I was interested in keeping the IR as close to the codegen target as possible, which are C++, CUDA, shading languages, or others. This IR doesn't really use single assignment form (SSA) or φ nodes, meaning modifications are not versioned. This does pose a problem for autodiff and makes optimization potentially harder, so I do have a compilation pass that can convert at least some in-place operations into versions of the original, in a rather ad-hoc way. I still need to do the same for `stores` and `scatters` too, since right now autodiff will usually compute the wrong gradients for these operations, as it doesn't use the correct version for the gradient, or actually, it simply doesn't have access to it, because it no longer exists in memory. I have a reason why I dont want to version everything - it will potentially result in overly aggressive additional memory allocation (like imagine this sorting algorithm created a copied version of keys/values every iteration), and you would need to optimize for it separately. But this reasoning could be completely wrong, since I haven't really worked with LLVM and am not sure about how applicable it might be for my use cases.*
 
 After the all the compilation stages, the IR creates kernel nodes, replaces multidimensional indexing with flattened 1D indexing, does some optimizations etc. 
 
 <details>
 <summary>Final compiled IR</summary>
+
+<div markdown="1">
 
 ```cpp
 int element_count = input_shape(flags={InputShapeDim(0), InputShapeMemory(0), }, cost=0.000000, )
@@ -509,6 +511,8 @@ int step = loop(inputs=[v1_14(0),steps,v1_13(1)], cost=141.000000, )
   }
 }
 ```
+
+</div>
 </details>
 
 
@@ -528,6 +532,7 @@ Which has a pretty simple input IR:
 
 <details>
 <summary>Matmul input IR</summary>
+<div markdown="1">
 
 ```cpp
 int v1_0 = const(data=[4294967295], )
@@ -545,12 +550,15 @@ float v1_7 = matmul(inputs=[v1_4,v1_6], shape=[v1_3,N], )
 float v1_8 = const(data=[1073741824], )
 float v1_9 = pow(inputs=[v1_7,v1_8(2.0f)], flags={OutputMemory(0), }, shape=[v1_3,N], )
 ```
+
+</div>
 </details>
 
 Close to the beginning of the compilation all nodes that are marked as `Algorithm` in the compilers dictionary are replaced with their specific implementations, and after that pass we will be left with an IR like this:
 
 <details>
 <summary>After algorithm insertion</summary>
+<div markdown="1">
 
 ```cpp
 int K = input_shape(flags={InputShapeDim(1), InputShapeMemory(0), }, )
@@ -579,6 +587,8 @@ int v1_9 = loop(inputs=[v1_8(0),K,v1_7(1)], )
 float v3_0 = const(data=[1073741824], )
 float v3_1 = pow(inputs=[matmul_2(0.0f),v3_0(2.0f)], flags={OutputMemory(0), }, shape=[v1_0,N], )
 ```
+
+</div>
 </details>
 
 As you can see, for the matrix multiplication, it has created a loop that accumulates products like `A[i,k]*B[k,j]` over `k`, and `transpose` is effectively just compiled into a load at transposed indices.
@@ -589,6 +599,7 @@ After this compilation pass the kernel generation and fusion happens as well as 
 
 <details>
 <summary>Final compiled matmul</summary>
+<div markdown="1">
 
 ```cpp
 int K = input_shape(flags={InputShapeDim(1), InputShapeMemory(0), }, cost=0.000000, )
@@ -646,6 +657,8 @@ kernel(cost=0.000000, shape=[v1_0,N], )
 }
 
 ```
+
+</div>
 </details>
 
 As you can see, it not only fused the `pow` at the end of the matrix multiplication, but also fused the transposition with the sin/cos operations into the summation loop. While this impressively created only a single kernel, this isn't actually super optimal. Matrix multiplcation is often bottlenecked by arithmetic, not just by memory access. And we effectively instead of doing sin/cos N^2 times, do them N^3 times now! This is something that I still need to fine tune in the fusion heuristics algorithm. In the future though, if you could use groupshared caches - it would be fine enough to do fuse these computations at the matrix "block" load stage, this should be enough to significantly reduce the overhead of doing additional sin/cos, as now we do them only for each "block" of the matrix, not for each product. But I would suspect that for huge matrices, these precomputations will still be a bottleneck, and need to be forcibly unfused.
