@@ -277,9 +277,11 @@ It does pose the question of what to do when doing a hybrid autodiff, like backw
 
 Let's look at how the IR looks in the compiler right now. We will look at the bitonic sort example at first to see how control flow is represented in the IR.
 
+{% raw %}
 <details>
 <summary>Parsed/traced input</summary>
 
+<div markdown="1">
 
 
 ```cpp
@@ -362,8 +364,10 @@ int step = loop(inputs=[v1_14(0),steps,v1_13(1)], )
   }
 }
 ```
-</details>
 
+</div>
+</details>
+{% endraw %}
 
 I made the debug IR representation be somewhat C-like since, at least for me, its easier to read than your usual IR representations. Every line here represents a node in the multilevel linked list. Each `{}` scope incapsulates all the child nodes of the previous to `{}` node. While the bitonic sort part is basically just a less readible version of the python code above, we now also have some additional nodes in the IR. Specifically `memory`, this is the node that represents allocated tensor memory on the device. Here we also see that it has flags signifying that its an output and input of the program. The `RemoveUnusedOperations` compilaiton stage removes everything that doesn't influence those memory nodes.
 
