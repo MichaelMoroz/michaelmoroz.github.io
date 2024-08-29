@@ -5,12 +5,18 @@ image: ShadertoyParticles.png
 ---
 
 A bit more than a year ago from when this blog post has been published, when I was working on neural variational monte carlo (NVMC) in Unity it became painfully clear that working on any Machine Learning, let alone of this kind - is simply a no go without the required tools. To make it even remotely work I needed to cut a lot of corners which were making the project quite useless apart from being a good learning experience and working on small models. Instead of using backpropagation I needed to use evolution strategies (ES), the neural network was hardcoded into a single kernel, and the reduction operations were very primitive "loop over all elements per thread", which don't map that well to GPU's.
+
 While this did in fact perform extremely fast for small systems (like 2-4 electrons), it scaled horribly for anything larger. From some point there is just not enough registers on the GPU to store the entire neural network state (including the determinant which was singlethreaded!) so you really need a smart and dynamic way to combine neural network operations together in kernels that optimally use groupshared memory.
-Of course while I realized these problems exist - intially I thought I'd try to go forward with the old approach, and try to implement a somewhat more advanced optimization algorithm. Since I still didn't have backpropagation, and couldn't be bothered writing it by hand - I chose a more advanced evolution based algorithm - LM-MA-ES (Limited Memory Matrix Adaptation Evolution strategies). It already required a lot of matrix operation I decided to make a small tensor library in C# for Unity.
 
-As you might have already guessed, it turned out to be the complete opposite of "small" and resulted in [TensorFrost](https://github.com/MichaelMoroz/TensorFrost): a statically compiling tensor library with focus on being more "shader-like" than other similar libraries, but still being high level enough to do your "ML-like" things.
+Of course while I realized these problems exist - intially I thought I'd try to go forward with the old approach, and try to implement a somewhat more advanced optimization algorithm. Since I still didn't have backpropagation, and couldn't be bothered writing it by hand - I chose a more advanced evolution based algorithm - LM-MA-ES (Limited Memory Matrix Adaptation Evolution Strategies). It already required a lot of matrix operation I decided to make a small tensor library in C# for Unity.
 
-> The name was chosen from "tensor" + my surname translated from Ukrainian to english. I know, its not super creative. Also there is the funny problem that LLM's mistakingly assume its TensorFlow. Perhaps I should do `import TensorFrost as fr` instead of `as tf` in my examples.
+As you might have already guessed, it turned out to be the complete opposite of **"small"** and resulted in [TensorFrost](https://github.com/MichaelMoroz/TensorFrost): a statically compiling tensor library with focus on being more "shader-like" than other similar libraries, but still being high level enough to do your "ML-like" things.
+
+<details><summary>TensorFrost?</summary><p>
+The name was chosen from "tensor" + my surname translated from Ukrainian to English. I know, its not super creative, given how many TensorSomething already exist. Also there is the funny problem that LLM's mistakingly assume its TensorFlow. Perhaps I should do `import TensorFrost as fr` instead of `as tf` in my examples.
+</p></details>
+
+---
 
 The thing is, this [isn't](https://github.com/MichaelMoroz/TensorCL) the first time I tried to make a tensor library. The first one I did in OpenCL a whole 5 years ago when I was still in the 3rd year of uni. At that point I didn't really know how to do kernel fusion or any other compiler-like optimization techniques so in the end I dropped the project since there wasn't anything particularly useful you could do with it (also you could just die from the bug infestation it had). It did have backwards mode autodifferentiation implemented by using a operation tape, but the performance of doing every operation one kernel at a time was just too bad for the stuff I usually do.
 (Interestingly enough, the reason I started working on it was quite similar to the one right now, I wanted to implement a neural potential energy surface for modelling molecules, specifically ZnO clusters)
@@ -18,7 +24,7 @@ The thing is, this [isn't](https://github.com/MichaelMoroz/TensorCL) the first t
 This time I knew, if I wanted to make a library like that, the only way to keep it alive is by making it minimally useful for things that I'm good at. Like graphics, simulations, and other related pet project. If you've seen my [Shadertoy page](https://www.shadertoy.com/user/michael0884) - it is essentially what I'm talking about. Also some algorithms that I come up with are simply too bothersome to implement in pure shaders, so I almost never touched machine learning related stuff apart of some things that are simple enough to port to shaders, like some [really simple Neural Implicit Representations](https://www.shadertoy.com/view/DstGDX).
 So ideally, if I make a new library - it should be at least able to make all the things I do in Shadertoy at similar performance. 
 
-> Before starting, I should say that the current state of the library is still far from being production ready, with the exception of some specific use cases. And given that this is pretty much my first time writing a compiler, everything should be taken with a grain of salt.
+> Before starting, I should say that the current state of the library is still far from being production ready, and at this point I would strongly recommend not to use this for any serious projects. Also given that this is pretty much my first time writing a compiler, there are probably both wrong architectural choices, as well as just simply wrong assumptions.
 
 - [The beggining of the end](#the-beggining-of-the-end)
 - [Architecture](#architecture)
@@ -650,7 +656,8 @@ After you wrote the main function you can compile it into a `TensorProgram` like
 matmul_compiled = tf.compile(matmul)
 ```
 
-The `TensorProgram` objects take and output tensor memory buffers, which can be created from numpy arrays:
+The `TensorProgram` objects take and output `TensorMemory` buffer objects, which can be created from numpy arrays like this.
+
 ```python
 A = tf.tensor(np.zeros([100, 100], dtype=np.float32))
 B = tf.tensor(np.zeros([100, 100], dtype=np.float32))
@@ -658,13 +665,15 @@ B = tf.tensor(np.zeros([100, 100], dtype=np.float32))
 
 Then you can run the program:
 ```python
-A, B = wave_eq(A, B)
+C = matmul_compiled(A, B)
 ```
-As you can see the inputs are given to the compiled function in the same order as they are created in the function.
+
+As you can see the inputs are given to the compiled function in the same order as they were executed in the compiled function.
 
 To get the result back into a numpy array, you can use the `numpy` property:
+
 ```python
-Anp = A.numpy
+Cnp = C.numpy
 ```
 
 ### Modules
