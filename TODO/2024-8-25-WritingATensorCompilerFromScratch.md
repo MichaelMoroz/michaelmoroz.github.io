@@ -69,7 +69,28 @@ def factorial(n):
 
 Such native loops are required if you want a varying iteration count for some operaiton, in simulations this could be, for example, a summing a force from a varying number of particle neighbors. From a purely ML standpoint, this isn't really a problem, since such cases practically never happen, and on top of that, gradients of such loops might potentially have atrocious performance (or might just be uncomputable if the loop can be infinite). 
 
-You could alternatively write a dynamic mask that will depend on the iteration, and unroll the loop, but this would simply be slower and less readable.
+You could alternatively write a dynamic mask that will depend on the iteration, and unroll the loop, but this would simply be slower and less readable. Like here I once tried to make a vectorized Numpy function to compute the mandelbulb SDF:
+
+```py
+def mandelbulb_sdf(pos, iter_num=mandelbulb_iter_num, power=mandelbulb_power):
+    z = pos
+    dr = 1.0
+    r = 0.0
+    for i in range(iter_num):
+        r = np.linalg.norm(z, axis=-1)
+        not_mask = ~(r > 1.5)
+        
+        theta = np.arccos(z[..., 2] / r)
+        phi = np.arctan2(z[..., 1], z[..., 0])
+        dr = np.where(not_mask, r**(power - 1.0) * power * dr + 1.0, dr)
+        
+        zr = r**power
+        theta *= power
+        phi *= power
+        
+        z = np.where(not_mask[:, :, :, np.newaxis], pos + zr[:, :, :, np.newaxis] * np.array([np.sin(theta) * np.cos(phi), np.sin(theta) * np.sin(phi), np.cos(theta)]).transpose(1, 2, 3, 0), z)
+    return 0.5 * np.log(r) * r / dr
+```
 
 Usually, when hitting a performance bottleneck, you have to write a custom CUDA kernels, which is doable, but quite annoying, as it forces you to use separate environments, CUDA and Python.
 
@@ -126,11 +147,9 @@ I also wanted to have at least some sort of control flow, which wasn't ovious ho
 
 ## Second prototype
 
-I'll start with the famous quote:
-
 > Any sufficiently complicated C or Fortran program contains an ad hoc, informally-specified, bug-ridden, slow implementation of half of Common Lisp.
 
-So the second prototype, the one that became TensorFrost, is basically just that, hidden in a coat. This time I wrote it in C++ and decided to instead enforce the order of operations to make in-place operations have properly specified order. I constructed the IR like a linked list, order of which is taken from the way they are written in the code (or traced, as in this case I have't really implemented a parser and just throwing this job to the frontend). This simplifies the kernel fusion problem to one of finding ranges of fusable operations, and in my case instead of fusion I unfuse the entire graph into parts by finding sections that can not be fused together given some rules based on order of memory access, shape of the operations, etc. In some cases this effectively can convert the entire graph into a single kernel, which is exactly what I'm looking for.
+This time I wrote it in C++ and decided to instead enforce the order of operations to make in-place operations have properly specified order. I constructed the IR like a linked list, order of which is taken from the way they are written in the code (or traced, as in this case I have't really implemented a parser and just throwing this job to the frontend). This simplifies the kernel fusion problem to one of finding ranges of fusable operations, and in my case instead of fusion I unfuse the entire graph into parts by finding sections that can not be fused together given some rules based on order of memory access, shape of the operations, etc. In some cases this effectively can convert the entire graph into a single kernel, which is exactly what I'm looking for.
 
 Ordering the operations is not the only thing. To implement control flow I needed to have child and parent nodes while still keeping a uniquely specified ordering, I effectively implemented this as a multi-level linked list. This way operaitons controlled by a conditional statement or by loops become its children.
 In multi-level linked lists kernel fusion becomes slightly more tricky, but effectively its just a recursive process of finding the ranges of fusable operations starting from the lowest level of the list, and fusing them level by level.
