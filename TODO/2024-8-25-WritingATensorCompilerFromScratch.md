@@ -6,6 +6,8 @@ image: TensorFrost.png
 
 In this blog post I want to talk about the research and development results for a library that I started working on more than a year ago - [TensorFrost](https://github.com/MichaelMoroz/TensorFrost). Under the hood it's a static optimizing tensor compiler with a focus on being able to do more "shader-like" things while still keeping the ability to do high level linear algebra for ML in numpy-like syntax with automatic differentiation support.
 
+If you want to see actual code examples, jump to [Python frontend](#python-frontend). If you want to see real use case examples, jump to [So what can we do with this?](#so-what-can-we-do-with-this).
+
 I started working on it 14 months ago when I hit a wall when I was working on neural variational monte carlo in Unity (I might make a separate blog post on this). After some time it became obvious that Machine Learning, let alone of this kind, is simply a no go without the required tools. Before realizing that, to make it even remotely work I needed to cut a lot of corners. Instead of using backpropagation I used evolution strategies, the neural network was hardcoded into a single kernel (including the determinant which was computed in a single thread in the same kernel!), and the reduction operations were very primitive "loop over all elements per thread", which don't map that well to GPU's. Finding the median of an array was also annoying, as I didn't bother with making a sorting algorithm, so I just found the "approximate" median. This is not an exhaustive list of issues, it was simply that limiting to do quite literally anything there.
 
 While this did perform extremely fast for small systems (like 2-4 electrons and small network), it scaled horribly for anything larger. From some point there is just not enough registers on the GPU's streaming multiprocessor to store the entire neural network state, so ideally you would need a smart and dynamic way to combine neural network operations together in kernels that optimally use groupshared memory, unless you want to performance to drop to nearly zero, or do it manually.
@@ -43,10 +45,10 @@ There are a lot of ideas combining graphics, physics and ML that I sometimes hav
   - [Codegen](#codegen)
   - [Runtimes](#runtimes)
 - [So what can we do with this?](#so-what-can-we-do-with-this)
-  - [Simulations](#simulations)
-  - [Graphics](#graphics)
-  - [Basic machine learning](#basic-machine-learning)
-- [What's the performance compared to other tensor libraries?](#whats-the-performance-compared-to-other-tensor-libraries)
+  - [Fluid simulation](#fluid-simulation)
+  - [Path tracer](#path-tracer)
+  - [Texture embedder with small neural network](#texture-embedder-with-small-neural-network)
+- [What's the current performance compared to other tensor libraries?](#whats-the-current-performance-compared-to-other-tensor-libraries)
   - [N-body simulation](#n-body-simulation)
   - [MNIST with a convolutional network](#mnist-with-a-convolutional-network)
 - [Future improvements](#future-improvements)
@@ -964,27 +966,38 @@ I plan on also adding CUDA and Vulkan in the future, for the first one I could j
 
 # So what can we do with this?
 
-## Simulations
+## Fluid simulation
 
-Before all the algorithmic stuff I initially played around with simulations that map nicely to multidimensional arrays. For example, I implemented a 
+Before all the algorithmic stuff I initially played around with simulations that map nicely to multidimensional arrays. For the most interesting example, I implemented a 2D fluid solver with a multigrid pressure solver, RK4 bicubic advection, and vorticity confinement.
 
-TODO: fluid sim video and screenshot
+<center><iframe width="560" height="315" src="https://www.youtube.com/embed/CVF4cZOsMK4?si=SJsZ2R_SIe-yyXgF" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
 
-## Graphics
+## Path tracer
 
-TODO: Path tracer
+<center><iframe width="560" height="315" src="https://www.youtube.com/embed/ShWO5YSphOY?si=SqgPVOAhQNP_izF6" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
 
-## Basic machine learning
+One amazing thing here, is that the normals here are computed through backpropagation and not finite differences! It actually also improved the performance, as FD normals take 4x SDF calculations using the tetrahedron trick, while backwards mode autodiff only takes on the order of 2x.
 
-TODO: mnist, texture embedder
+## Texture embedder with small neural network
 
-# What's the performance compared to other tensor libraries?
+<center><iframe width="560" height="315" src="https://www.youtube.com/embed/7uzuGftSYKk?si=xt17EQguu4pg_PlV" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
 
-I'll focus on comparing something thats easy to implement in both my library and in PyTorch.
+# What's the current performance compared to other tensor libraries?
+
+I'll focus on comparing something thats easy to implement in both my library and in PyTorch. Things like the fluid sim or path tracer, I suspect, have no chance of running good if at all in PyTorch, JAX - maybe, but I doubt, so we'll ignore these. 
+
+Of course, something like Taichi would actually win here, but its not our comparison target, and likely after I implement automatic groupshared cache generation the performance gap might go to 0, or become better, tho I suspect probably not.
+
+TODO: plots
 
 ## N-body simulation
 
+One of the simplest simulations you can do - is an N-body gravity simulation, which only takes a few dozen lines both in TensorFrost, JAX or PyTorch, making this a nice comparison target.
+
 ## MNIST with a convolutional network
+
+After I implemented module support with the optimizers, first thing I implemented is a convolutional neural net for the Fashion MNIST classification problem.
+This is a more classic ML problem and you would probably expect for PyTorch or JAX to just straight up win every time. Turns out, actually no, for small network sizes, TensorFrost can actually have a significant win, but I do suspect it might be related simply to either having way less overhead or not loading the traning batch through the CPU, which can kill perf a lot.
 
 # Future improvements
 
