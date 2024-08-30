@@ -972,6 +972,8 @@ Before all the algorithmic stuff I initially played around with simulations that
 
 <center><iframe width="560" height="315" src="https://www.youtube.com/embed/CVF4cZOsMK4?si=SJsZ2R_SIe-yyXgF" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
 
+Nevermind the boundary artifacts or the interpolation issues with the density, its fixable, but I didn't have enough time to mess around with it. I will probably implement a 3D fluid simulation next time anyway.
+
 ## Path tracer
 
 <center><iframe width="560" height="315" src="https://www.youtube.com/embed/ShWO5YSphOY?si=SqgPVOAhQNP_izF6" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
@@ -984,7 +986,7 @@ One amazing thing here, is that the normals here are computed through backpropag
 
 # What's the current performance compared to other tensor libraries?
 
-I'll focus on comparing something thats easy to implement in both my library and in PyTorch. Things like the fluid sim or path tracer, I suspect, have no chance of running good if at all in PyTorch, JAX - maybe, but I doubt, so we'll ignore these. 
+I'll focus on comparing things that are easy to implement in both my library and in PyTorch/JAX. Things like the fluid sim or path tracer, I suspect, have no chance of running good if at all in PyTorch, JAX however might work fine with vmap, but I'm not sure, so for these tests, I'll ignore these use cases, as they will not be easy to port to them anyway, given the quite different syntax. 
 
 Of course, something like Taichi would actually win here against everyone, but its not our comparison target as you cant write the simulation in vectorized tensor form there, and likely after I implement automatic groupshared cache generation the performance gap might go to 0, or become better, tho I suspect probably not without some really advanced heuristics.
 
