@@ -960,7 +960,7 @@ This is also not perfect, ideally I would also provide an example implementation
 
 Right now there are only 2 runtime backends - C++/OpenMP and C++/OpenGL. After the compiler generates the C++ code for the shaders and the host, its compiled by the C++ compiler, and also by the OpenGL shader compiler (which is built in the driver and can have horrible bugs, by the way).
 
-I plan on also adding CUDA and Vulkan in the future, for the first one I could just compile everything host + kernels into a single `.cu` file, and its probably relatively straight forward to do, but in the case of Vulkan I would need to write all the boilerplate code for handling basic compute, compiling shaders and memory allocation.
+I plan on also adding CUDA and Vulkan in the future, for the first one I could just compile everything, host and kernels into a single `.cu` file, and its probably relatively straightforward to do (will still need to keep OpenGL for visualization interop), but in the case of Vulkan I would need to write all the boilerplate code for handling basic compute, compiling shaders and memory allocation, that will probably take quite some time.
 
 # So what can we do with this?
 
