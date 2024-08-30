@@ -37,6 +37,7 @@ There are a lot of ideas combining graphics, physics and ML that I sometimes hav
   - [Main code](#main-code)
   - [Host code](#host-code)
     - [Modules](#modules)
+    - [Optimizer modules](#optimizer-modules)
   - [Visualization and interactivity](#visualization-and-interactivity)
 - [Backends](#backends)
   - [Codegen](#codegen)
@@ -138,34 +139,34 @@ This was the operation/kernel cluster graph for this fluid simulation:
 
 <center><iframe width="560" height="315" src="https://www.youtube.com/embed/gRZzMPo1RLg?si=UfZ9HGTNYV51tBtn" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
 
-It did work, unfortunately there was no good way to procedurally generate shader code in Unity, so I did something rather stupid and implemented a Virtual Machine right in the shader, which made it particularly slow. However, of the good things, there was practically 0 compile time, but unforuntately that not very interesting to me. The way I did reductions to get the average energy here was also rather questionable - I did it with atomics. For some cases they are good, but reduction is not one of them. Especially given that there are no natively supported float atomics in HLSL, so you need to emulate them through `InterlockedExchangeCompare`, which makes it even slower for this particular use case. One time it even crashed my computer when trying to add a few million floats in parallel to a single location.
+It did work, unfortunately there was no good way to procedurally generate shader code in Unity, so I did something rather stupid and implemented a Virtual Machine right in the shader, which made it particularly slow. However, of the good things, there was practically 0 compile time, but unforuntately that was not the goal I had in mind. The way I did reductions to get the average energy here was also rather questionable - I did it purely with atomics. For some cases they are good, but reduction is not one of them. Especially given that there are no natively supported float atomics in HLSL, so you need to emulate them through `InterlockedExchangeCompare`, which makes it even slower for this particular use case. One time it even crashed my computer when trying to add a few million floats in parallel to a single element.
 
 The VM basically only knows of 1 dimensional loads and stores, so I also needed to add a compilation stage that converts multidimensional indices into operations that compute the "flattened" index.
 
-At this point the graph was quite simple, and I implemented backward-mode autodiff here, which was surprisingly easy. The only not super obvious thing initially was load/store gradients. But those are effectively just atomic_add/load respectively. So in theory, you could implement any ML algorithm even here, but that would be comically slow. Matrix multiplication gradient would be 2 atomic adds per thread in a 3D kernel basically.
+At this point the graph had only a few operation types, and I implemented backward-mode autodiff here, which was surprisingly easy. The only not super obvious thing initially was load/store gradients. But those are effectively just atomic_add/load respectively. So in theory, you could implement any ML algorithm even here, but that would be comically slow. Matrix multiplication gradient would be 2 atomic adds per thread in a 3D kernel.
 
-Another thing that turned out to be a huge problem was that the operation graph did not have a "stable" order, it was only topologically sorted, which is good for normal operations, but for inplace operations like stores and atomics this leads to randomly varying results, which is a no-go.
+Another thing that turned out to be a huge problem was that the operation graph did not have a "stable" order, it was only topologically sorted (I actually resorted it every time I did something with the graph!), which is good for normal operations, but for inplace operations like stores and atomics this leads to randomly varying results, which is a no-go.
 
-Adding the problem of exponentially growing number of possible operation fusions and the graphs quicky became undebuggable node soup making this approach not very appealing:
+Adding the problem of exponentially growing number of possible kernel fusions and the graphs quicky became an undebuggable node soup, which made this approach not very appealing:
 
 <center><img src="{{ site.baseurl }}/images/wtf.png" height="400px"></center>
 
-I also wanted to have at least some sort of control flow, which wasn't ovious how to add into this specific graph for me at the time.
+I also wanted to have at least some sort of control flow, which wasn't obvious how to add into this specific graph for me, at the time.
 
 ## Second prototype
 
 > Any sufficiently complicated C or Fortran program contains an ad hoc, informally-specified, bug-ridden, slow implementation of half of Common Lisp.
 
-This time I wrote it in C++ and decided to instead enforce the order of operations to make in-place operations have properly specified order. I constructed the IR like a linked list, order of which is taken from the way they are written in the code (or traced, as in this case I have't really implemented a parser and just throwing this job to the frontend). This simplifies the kernel fusion problem to one of finding ranges of fusable operations, and in my case instead of fusion I unfuse the entire graph into parts by finding sections that can not be fused together given some rules based on order of memory access, shape of the operations, etc. In some cases this effectively can convert the entire graph into a single kernel, which is exactly what I'm looking for.
+This time I wrote it in C++ and decided to instead enforce the order of operations to make in-place operations have properly specified order. I constructed the IR like a linked list, order of which is taken from the way the code is parsed. This simplifies the kernel fusion problem to one of finding ranges of fusable operations, and in my case I fuse everything except any node pair that violated some rules that I came up with, based on order of memory access, shape of the operations, etc. In some cases this effectively can convert the entire graph into a single kernel, which is exactly what I'm looking for.
 
-Ordering the operations is not the only thing. To implement control flow I needed to have child and parent nodes while still keeping a uniquely specified ordering, I effectively implemented this as a multi-level linked list. This way operaitons controlled by a conditional statement or by loops become its children.
+Ordering the operations is not the only thing. To implement control flow I needed to have child and parent nodes while still keeping a uniquely specified ordering, I implemented this by using a multi-level linked list. This way operaitons controlled by a conditional statement or by loops become its children.
 In multi-level linked lists kernel fusion becomes slightly more tricky, but effectively its just a recursive process of finding the ranges of fusable operations starting from the lowest level of the list, and fusing them level by level.
 
 <center><img src="{{ site.baseurl }}/images/multilevel.png" height="300px"></center>
 
-The kernels are effectively also represented in the same IR, as children of a "kernel" node. At the code generation stage, everything outside of the kernel nodes is converted into host code, and the kernels are converted into device code. This way the entire program is represented in a single IR, and the compiler can optimize the entire program globally.
+The kernels are effectively also represented in the same IR, as children of a "kernel" node. At the code generation stage, everything outside of the kernel nodes is converted into host code (right now C++), and the kernels are converted into device code (OpenMP C++ or GLSL/HLSL). This way the entire program is represented in a single IR, and the compiler can optimize it globally both for CPU and GPU parts.
 
-Since the IR is the same for all compilation stages, you could for example input both high level tensor operations and explicitly specified kernels, and can already be done now like here:
+Since the IR is the same for all compilation stages, you could for example input both high level tensor operations together with explicitly specified kernels, and it can already be done like this:
 
 ```py
 A = tf.input([-1, -1], tf.float32)
@@ -179,7 +180,7 @@ with tf.kernel(A.shape) as (i, j):
 C = (C @ A.T) + tf.unsqueeze(tf.sum(tf.sin(B @ A),axis=-1),axis=-1)
 ```
 
-This is already quite nice.
+This is already quite nice. (I'll explain the Python syntax a bit later)
 
 *(Note: of course, if you tried to compute the gradient here, the compiler would fail, at least at this point in time, as general gradients over control flow are not trivial)*
 
@@ -214,26 +215,26 @@ In this case the compiler can spot that you can't fuse the insides of the loop s
 
 However, while you can do that, in this particular case, I woudn't recommend relying on the compiler too much, and would put an explicit kernel under the loop, since even changing the loading order from before the stores, to the middle, will split the kernel in 2 and potentially break it right now.
 
-I had [one specific case](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/n-body.ipynb) when it was an issue when I tried to optimize a software sphere rasterizer, by adding an additional read to check if the atomic min is required I effectively made the compiler think that this part of the code needs to be split into parts and simply just broke the rendering.
+I had [one specific case](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/n-body.ipynb) when it was an issue when I tried to optimize a software sphere rasterizer, by adding an additional read to check if the atomic min can be skipped I effectively made the compiler think that this part of the code needs to be split into parts and simply just broke the rendering.
 
 This shows that, while powerful, such inference of how the program is structured does not always work, or requires a much more advanced compiler than I have here.
 On the other hand, in the case of [the 2D fluid simulation example](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/fluid_simulation.ipynb), kernel generation worked quite well, since there is no control flow to confuse the compiler.
 
 ### Optimization and generation of the kernels
 
-Simply splitting the IR into kernel regions is actually not enough to make sure you dont have a million unneeded loads or stores. One very basic way to optimize the kernels is effectively just copying computations that are cheaper to do than to load. Such things like constants, or very simple arithmetic are examples of this. Doing this optimization not only reduces the number of global memory access a lot usually, but also removes a lot of unneeded kernels that would have just stored a constant or something similar into memory.
+Simply splitting the IR into kernel regions is actually not enough to make sure you dont have a million unneeded loads or stores. One very basic way to optimize the kernels is effectively just copying computations that are cheaper to do than to load from memory. Such things like constants, or very simple arithmetic are examples of this. Doing this optimization not only reduces the number of global memory access a lot usually, but also removes a lot of unneeded kernels that would have just stored a constant or something similar into memory.
 
-I also have the standard "removing of unused computation" here. Since we have the entire IR graph from input to ouput given, this additionally allows to figure out which parts of the computation are influencing the outputs. So I can effectively assume that everything else is unused and can be simply removed. (TODO: fix bug when doing inplace operation on input that is not returned as output)
+I also have the standard "removing of unused computation" here. Since we have the entire IR graph from input to ouput given, this additionally allows to figure out which parts of the computation are influencing the outputs. So I can effectively assume that everything else is unused and can be simply removed.
 
-When generating compute kernels out of such an IR, you can not simply use the N dimensional shape of the kernel, and you need to map the tensor indices to the specific layout of the GPU. In this case, thats the group indices, and the workgroup thread indices (in more advanced cases, in DX12/Vulkan/CUDA/etc there is also the warp sub-group, but I'll ignore it for now). To do this mapping we ideally would need to figure out the shape of the workgroup, which must be a compile time constant, from the computations we do. But at the moment I simply estimate the group shape from the last 3 dimensions of the kernel, and clamp them to some predefined constants depending on dimensionality. This is suboptimal, but doing it better would either require having a VM that estimates the range of indices of memory accesses, or an autotuner. The first will take some time to implement, and is in my TODO list, as its also useful for other things, and the second, while easier I'm currenty not considering, as it could increase compile times quite significantly.
+When generating compute kernels out of such an IR, you can not simply use the N dimensional shape of the kernel, and you need to map the tensor indices to the specific layout of the GPU. In this case, that's the group indices, and the workgroup thread indices (in more advanced cases, in DX12/Vulkan/CUDA/etc there is also the warp sub-group, but I'll ignore it for now). To do this mapping we ideally would need to figure out the shape of the workgroup, which must be a compile time constant, from the computations we do. But at the moment I simply estimate the group shape from the last 3 dimensions of the kernel, and clamp them to some predefined constants depending on dimensionality. This is suboptimal, but doing it better would either require having a VM that estimates the range of indices of memory accesses, or an autotuner. The first will take some time to implement, and is in my TODO list, as its also useful for other things, and the second, while easier I'm not currenty considering, as it could increase compile times quite significantly. (And they already reach 30 seconds on Windows for my Variational Monte Carlo solver!)
 
 ### Algorithmic operations
 
 The bare IR does not know about complex operations like matrix multiplication, reductions, etc. These are implemented as a special compiler pass, that converts the high level operation nodes into a series of simpler operations. For example reduction sums `tf.sum` are converted into a loop of adds, matrix multiplications into a loop of muls and adds, etc. 
 
-These simpler operations aren't yet put into kernels, so the compiler can do additional optimizations on them. As they are written in the same IR and not as separate outside kernels also means that all possible optimizations that that the compiler has - can be applied to them, like inserting simple arithmetic instead of memory loads (useful for operations over procedural data, like random), or adding the activation at the end of the matrix multiplication loop, etc.
+These simpler operations aren't yet put into kernels, so the compiler can do additional kernel fusion optimizations on them. As they are written in the same IR and not as separate outside kernels also means that all possible optimizations that that the compiler has - can be applied to them, like inserting simple arithmetic instead of memory loads (useful for operations over procedural data, like random), or adding the activation at the end of the matrix multiplication loop, etc.
 
-(Though to be fair, right now, the compiler optimizes them a bit too aggressively, and can put a lot of needless computation inside a matmul loop for example, this needs to be fixed in the future with better heuristics)
+(Though to be fair, right now, the compiler optimizes them a bit too aggressively, and can put a lot of needless computation inside a matmul loop for example, this needs to be fixed in the future with better heuristics. Detailed example in `IR under the hood` section)
 
 ### Advanced kernel fusion
 
@@ -241,7 +242,7 @@ Kernel fusion by splitting into ranges of the multi-level linked list works fine
 
 To optimize even these cases you can do something I call tensor load fusion - you replace a loading operation with the recomputed result of the load target with the given load indices replacing the target kernel indices.
 
-This was tricky to implement, but it allows to fuse operations like `tf.sum(A[i,k]*B[k,j], axis=2)` into a single 2D kernel, instead of 3D + 2D kernels. This gives a massive speedup in some cases when writing operations in such a naive way. This for example allows you to write out a conv2d operation in a similar form as a sum over a 7D tensor, and the compiler will fuse it into a single 4D kernel, while giving comparable performance to native pytorch. Here is an implementation in TensorFrost which is effectively equivalent to PyTorches conv2d without padding:
+This was tricky to implement, but it allows to fuse operations like `tf.sum(A[i,k]*B[k,j], axis=2)` into a single 2D kernel, instead of 3D + 2D kernels. This gives a massive speedup in some cases when writing operations in such a naive way. For example this allows you to write out a `conv2d` operation in a similar form as a sum over a 6D tensor, and the compiler could fuse it into a single 5D reduction + 4D reduction, while giving comparable performance to native pytorch (for small kernels). Here is an implementation in TensorFrost which is effectively equivalent to PyTorch'es `conv2d` without padding:
 
 ```py
 def conv2d(X, W):
@@ -251,18 +252,19 @@ def conv2d(X, W):
     i, j = it%w, it/w
     return  tf.sum(tf.sum(X[bi, cin, wi + i, hi + j] * W[cout, cin, i, j]))
 ```
-At the moment only the first `tf.sum(some indexed operations)` gets fused into a single kernel. Which is actually completely fine, as we dont want to merge multiple `sum` together and we want them to be staged. This is actually why I manually fused the kernel dimensions `w` and `h` together, as you need to have a balance between the size of the loop and number of reduction stages. This could theoretically be done automatically, but it would require autotune or more advanced heuristics. 
+
+At the moment only the first `tf.sum(some operations)` gets fused into a single kernel. Which is actually completely fine, as we dont want to merge multiple `sum` together and we want them to be staged. This is actually why I manually fused the kernel dimensions `w` and `h` together, as you need to have a balance between the size of the loop and number of reduction stages. This could theoretically be done automatically, but it would require autotune or more advanced heuristics. 
 
 ### Automatic differentiation
 
-Looking at the example in the section above you might think that autograd would completely fail when differentiating such an expression. Which would be the case if done naively. Whats worse, in the programs I write, loads at addresses are extremely prelevant. If you apply autodiff dirrectly on multidimensional loads you get multidimensional atomic adds. In general, you can't really do much with them, but in most cases, the indices of the atomic adds are simple, or are constants. 
-In those cases you could check what dimension indices of the operation are not used in the atomic add address computation, and conclude that all threads of this atomic add for this dimension add to the same element. This would mean that we can optimize this by transforming this dimension into a sum over it, with a following atomic add to this element in the end. Even more, you could also check if the indices map 1 to 1, meaning that they do not make conflicting writes, and can just be replaced with a simple store operation. (However, I don't actually do this at the moment as nonconflicting atomic adds are cheap enough to be ignored for now)
+Looking at the example in the section above you might think that autograd would completely fail when differentiating such an expression. Which would be the case if done naively. Whats worse, in the programs I write, loads at addresses are extremely prevalent. If you apply autodiff dirrectly on multidimensional loads you get multidimensional atomic adds. In general, you can't really do much with them, but in most cases, the indices of the atomic adds are simple, or are constants. 
+In those cases you could check what dimension indices of the operation are not used in the atomic add address computation, and conclude that all threads of this atomic add for this dimension add to the same element. This would mean that we can optimize this by transforming this dimension into a sum over it, with a following atomic add to this element in the end. Even more, you could also check if the indices map 1 to 1, meaning that they do not make conflicting writes, and can just be replaced with a simple load, add and store operation. (However, I don't actually do this at the moment as nonconflicting atomic adds are cheap enough to be ignored for now)
 
-These optimizations improve performance of automatically differentiated operations of this kind by *a lot*, and makes prototyping differentiable convolution-like algorithms quite easy.
+These optimizations improve performance of automatically differentiated operations of this kind by *a lot*, and makes prototyping differentiable convolution-like algorithms quite easy. (I'm interested in trying to fine tune a differentiable multi-grid Poisson equation solver, with boundary conditions, by making lots of small convolutions like these)
 
-The rest of the automatic gradient algorithm is your run-of-the-mill backwards mode autodiff. The autodiff pass is before the algorithm insertion pass, so the gradients are computed for high-level operations if possible as they are usually more numerically stable. (And also I don't have a way to compute gradients of control-flow at the moment, so it works as a substitute for that for now)
+The rest of the automatic gradient algorithm is your run-of-the-mill backwards mode autodiff. The autodiff pass is before the algorithm insertion pass, so the gradients are computed for high-level operations if possible, as they are usually cheaper and more numerically stable. (And also I don't have a way to compute gradients of control-flow at the moment, so it works as a substitute for that for now)
 
-Right now gradiets are specified like `tf.grad(a,b)`, and actually, `a` doesn't need to be a scalar, the default vector jacobian product (VJP) input is always a 1 no matter the dimensionality of a. This is useful, for instance, when computing gradients of a potential, for example:
+Right now gradiets are specified like `tf.grad(a,b)`, and actually, `a` doesn't need to be a scalar, the default vector jacobian product (VJP) input is always a 1 no matter the dimensionality of a. This is useful, for instance, when computing gradients of a potential, for instance:
 
 ```py
 dx = x1 - x2
@@ -272,13 +274,13 @@ force = - tf.grad(pot, dx)
 ```
 
 Quite nice when doing a particle simulation. In fact I also use this when computing the normals for the SDF in my path tracing example.
-Do note however, this is only valid behaviour because these computations are independent, for pixels, or for particles, if they were depending on each other, the gradient would be invalid, and in that case you should use a scalar `a`.
+I should note that this is only valid behaviour because these computations are independent, for pixels, or for particles, if they were depending on each other, the gradient would be invalid, and in that case you should use a scalar `a`.
 
 The compiler when doing the autodiff searches for all unique `a`'s and does a full backprop over their dependencies, then all unused gradients are simply removed after this compilation pass.
 
 I still plan to implement forward mode automatic differentiation, in its case its somewhat easier to implement. Since for example I can just do it after all the algorithmic passes, as the form of the computation will be exactly the same as the original, just with slightly different operations.
 
-It does pose the question of what to do when doing a hybrid autodiff, like backward grad of forward grad. In that case the gradients need to be sorted by their order, and done one by one. Unfortunately in this case I would need to implement full jacobian vector product (JVP) (on top of the VJP's) for all algorithm operations, not just the base simple non-algorithmic ones, so I'll probably leave that for the far future.
+It does pose the question of what to do when doing a hybrid autodiff, like backward grad of forward grad. In that case the gradients need to be sorted by their order, and done one by one. Unfortunately in this case I would need to implement full jacobian vector product (JVP) (on top of the VJP's) for all algorithmic operations, not just the base simple non-algorithmic ones, so I'll probably leave that for the far future.
 
 ### IR under the hood
 
@@ -288,7 +290,6 @@ Let's look at how the IR looks in the compiler right now. We will look at the bi
 <summary>Parsed/traced input</summary>
 
 <div markdown="1">
-
 
 ```cpp
 int v1_0 = const(data=[4294967295], )
@@ -378,7 +379,7 @@ I made the debug IR representation be somewhat C-like since, at least for me, it
 
 *Those of you who know about LLVM would probably question the choices made here, but in my case specifically I was interested in keeping the IR as close to the codegen target as possible, which are C++, CUDA, shading languages, or others. This IR doesn't really use single assignment form (SSA) or φ nodes, meaning modifications are not versioned. This does pose a problem for autodiff and makes optimization potentially harder, so I do have a compilation pass that can convert at least some in-place operations into versions of the original, in a rather ad-hoc way. I still need to do the same for `stores` and `scatters` too, since right now autodiff will usually compute the wrong gradients for these operations, as it doesn't use the correct version for the gradient, or actually, it simply doesn't have access to it, because it no longer exists in memory. I have a reason why I dont want to version everything - it will potentially result in overly aggressive additional memory allocation (like imagine this sorting algorithm created a copied version of keys/values every iteration), and you would need to optimize for it separately. But this reasoning could be completely wrong, since I haven't really worked with LLVM and am not sure about how applicable it might be for my use cases.*
 
-After the all the compilation stages, the IR creates kernel nodes, replaces multidimensional indexing with flattened 1D indexing, does some optimizations etc. 
+After all the compilation stages, the IR creates kernel nodes, replaces multidimensional indexing with flattened 1D indexing, does some optimizations etc. 
 
 <details>
 <summary>Final compiled IR</summary>
@@ -694,14 +695,15 @@ def matmul():
 
 This will be the core of a `TensorProgram`. You probably noticed that it doesn't have arguments, right now its a rather ad-hoc way to give the ability to restrict shapes of some inputs to other inputs. Technically I could just parse the function python representation and generate `tf.input()` automatically, but in either case, you will still need to apply `tf.assert_tensor` to enforce their shape. 
 
-You are probably already asking why its done is such a weird way, but the main goal was the ability to have undefined tensor shapes at compile time, this way you don't need to recompile the program every time your input changes. This, as you can see, does add some restrictions, since if you don't do these shape `assertions` the compiler might not be able to figure out that A and B can actually be multiplied together and will throw an error. I could also have gone with the "assume everything is compatible" route and added assertions in the generated IR automatically before applying the operation, but I suspected such behaviour might have very annoying unintended consequences and could also result in fusion of parts of code that shouldn't have fused, which would either be wrong, or create assertions that might never be valid and always throw errors. Of course, you can still have the shapes as constants everywhere, in that case this particular quirk becomes rather annoying and more of a hindrence. I suspect that in the future I'll add support for both automatically reading the function arguments and manual specification like here.
-So yeah, the input shape of these `tf.input()` operations can be `-1` for unspecified, and `>0` for explicitly specified. In some cases having explicit shape might improve performance, as the compiler could do staged reductions and the like.
+You are probably already asking why its done is such a weird way, but the main goal was the ability to have undefined tensor shapes at compile time, this way you don't need to recompile the program every time your input changes. This, as you can see, does add some restrictions, since if you don't do these shape `assertions` the compiler might not be able to figure out that A and B can actually be multiplied together and will throw an error. I could also have gone with the "assume everything is compatible" route and added assertions in the generated IR automatically before applying the operation, but I suspected such behaviour might have very annoying unintended consequences and could also result in fusion of parts of code that shouldn't have fused, which would either be wrong, or create assertions that might never be valid and always throw errors. Of course, you can still have the shapes as predefined constants everywhere, in that case this particular quirk becomes rather annoying and more of a hindrence. I suspect that in the future I'll add support for both automatically reading the function arguments and manual specification like here.
 
-The way the IR is currently generated is by tracing the Python function, which is significantly easier than parsing Python AST. This does have some interesting side effects. If you do any sort of control flow inside this function, you can only do it with python values, and on top of that, the result will be unrolled and fixed at compile time. 
+So yeah, the input shape of these `tf.input()` operations can be `-1` for unspecified, and `>0` for explicitly specified (or you can use a shape from another input). In some cases having explicit shape might improve performance, as the compiler could do staged reductions and the like.
 
-In fact, all variables, N, M, A, B, etc - are not actual tensors, but abstractions in the IR, and don't have a value yet. So doing any kind of print would result in abstract info being spat out, and conversion into Numpy or any other python type would simply be impossible.
+The way the IR is currently generated is by tracing the Python function, which is significantly easier than parsing Python AST. This does have some interesting side effects. If you do any sort of control flow inside this function, you can only do it with Python values, and on top of that, the result will be unrolled and fixed at compile time. 
 
-As I wanted to have control flow in the IR, I either needed to parse Python AST, or somehow overload existing Python behavour. Initially, all scoped operations, like `if` or `loop` took a python function as input, which was quite ugly and very unreadable for deep code, in the same way JAX does it, pretty much. But then I discovered that you can actually overload context manager behavour. I found this trick in [a library for python based shader generation](https://github.com/ppenenko/metashade). This means that I can have custom calls at the beginning and end of a section of code, and I could automatically put it as a child scope.
+In fact, all variables, N, M, A, B, etc - are not actual tensors/scalars, but abstractions in the IR, and don't have a value yet. So doing any kind of print would result in abstract info being spat out, and conversion into Numpy or any other python type would simply be impossible.
+
+As I wanted to have control flow in the IR, I either needed to parse Python AST, or somehow overload existing Python behavour. Initially, all scoped operations, like `if` or `loop` took a python function as input, which was quite ugly and very unreadable for deep code, in the same way JAX does it, pretty much. But then I discovered that you can actually overload context manager behaviour. I found this trick in [a library for python based shader generation](https://github.com/ppenenko/metashade). This means that I can have custom calls at the beginning and end of a section of code, and I could automatically put it as a child scope.
 This is what I did, and I overloaded these for some tensor types, so now you can do contol flow in a nicer way! (Arguably still cursed, since now we have 2 ways to make control flow, with different results, not even mentioning that you need to use the `.set()` method or `.val` property of a tensor to set its value from these child scopes, as Python doesn't allow you to overload `=` operators, and also scatters and stores are fine too) 
 
 ```py
@@ -743,19 +745,22 @@ matmul_compiled = tf.compile(matmul)
 ```
 
 This traces the function into the IR, compiles the IR into kernel form, converts that into C++/Kernel code, compiles that, and links the compiled library at runtime.
-One of the fun (not) things about this on Windows, is that this requires the Visual Studio compiler installed, and on top of that its **SLOW** as hell, usually at 20x-50x of the IR compilation time. The compiler requires some totally cursed things to set up the env variables to even work, and the generated command ends up looking like this:
+One of the (not) fun things about this on Windows, is that this requires the Microsoft Visual Studio compiler installed, and on top of that its **SLOW** as hell, usually at 20x-50x of the IR compilation time. The compiler requires some totally cursed things to set up the env variables to even work, and the command generator ends up looking like this:
 
 ```cpp
  ss << "powershell -command \"$VisualStudioPath = & \\\"${Env:ProgramFiles(x86)}\\Microsoft Visual Studio\\Installer\\vswhere.exe\\\" -latest -products * -property installationPath; & cmd.exe /C \\\"\"\\\"\\\"$VisualStudioPath\\VC\\Auxiliary\\Build\\vcvarsall.bat\\\"\\\" x64 && cl "
-       << kernel_compile_options << " /LD " << tempPath
+       << kernelCompileOptions << " /LD " << tempPath
        << sourcePath << " /Fe:" << dllName
        << "\"\"\\\"\"";
 ```
 
-I have no clue what is going on here, and thankfully I wansn't the one who wrote this. At least it works. 
+I have no clue what is going on here, and thankfully I wasn't the one who wrote this (you should thank @Devaniti for this one). At least it works. 
 
-Linux users win with their `gcc` in that regard, which is usually also already installed too.
-The `TensorProgram` objects take and output `TensorMemory` buffer objects, which can be created from numpy arrays like this.
+Linux users win with their `gcc` in that regard, which is usually also already installed in the system. It is also just 3-4x faster than MVSC.
+
+In the future I want to add Python as an alternative host language (you could also use CUDA too!), as it will speedup the compile times up to 100x, with only slight performance overhead.
+
+These `TensorProgram` objects take and output `TensorMemory` buffer objects (you can also give numpy arrays, or `tf.Modules` as arguments), which can be created from numpy arrays like this.
 
 ```python
 A = tf.tensor(np.zeros([100, 100], dtype=np.float32))
@@ -777,7 +782,7 @@ Cnp = C.numpy
 
 ### Modules
 
-TensorFrost has a simple module system similar to PyTorch, where you can define a module with trainable parameters and a forward function that computes the output of the module as well as a loss function. 
+TensorFrost has a simple module system similar to PyTorch, where you can define a module with parameters (that you can optimize by utilizing the modules from tf.optimizers) and a forward function that computes the output of the module as well as a loss function. Neither of these are actually required, but in some cases the optimizers need a specified `loss` function.
 
 ```python
 class SmolNet(tf.Module):
@@ -835,17 +840,67 @@ Y = forward(model_container, X)
 `model.initialize_input()` creates `tf.input()` tensors for all the parameters of the module. Afterwards `assert_parameters` is automatically called for this and all child modules. This is useful if you want to use the module inside a TensorProgram, as you can just pass the module as an argument to the compiled function, and all the parameters will be automatically created and the shapes will be asserted.
 `model.initialize_parameters()` creates `tf.tensor()` tensors for all the parameters of the module and initializes them with random values. This is useful if you want to use the module outside of a TensorProgram, as you can just pass the module as an argument to the compiled function.
 
+This particular part of the library is still quite early stage, mostly only Python-side, and might change a lot in the future.
+
+### Optimizer modules
+
+TensorFrost has a set of built-in optimizer modules that can be used to train the parameters of the module. 
+- `tf.optimizers.sgd` - Stochastic Gradient Descent, has a `learning_rate` and `grad_clip` parameters, default values are 0.001 and 0.0 respectively.
+- `tf.optimizers.adam` - Adam optimizer, has a `learning_rate`, `beta1`, `beta2` and `grad_clip` parameters, default values are 0.001, 0.9, 0.999 and 0.0 respectively.
+- `tf.optimizers.rmsprop` - RMSProp optimizer, has a `learning_rate`, `decay` and `grad_clip` parameters, default values are 0.001, 0.9 and 0.0 respectively.
+
+All optimizer modules are initialized with the module as the first argument, and the training hyperparameters as the rest of the arguments.
+
+```python
+def OptimizerStep():
+    X = tf.input([-1, -1], tf.float32)
+    Y = tf.input([-1, 10], tf.float32)
+
+    model = SmolNet()
+    opt = tf.optimizers.adam(model, learning_rate=0.001, beta1=0.9, beta2=0.999)
+    opt.initialize_input()
+    
+    #do a single step of the optimizer (automatically computes gradients and updates the parameters)
+    L = opt.step(X, Y) 
+    #or 
+    #L = model.loss(X, Y)
+    #opt.step(L)
+
+    params = opt.parameters()
+    params.append(L)
+    return params
+
+step = tf.compile(OptimizerStep)
+
+model_container = SmolNet()
+opt = tf.optimizers.adam(model_container)
+opt.initialize_parameters()
+
+X = tf.tensor(np.zeros([100, 100], dtype=np.float32))
+Y = tf.tensor(np.zeros([100, 10], dtype=np.float32))
+out = step(X, Y, opt)
+opt.update_parameters(res[:-1])
+loss = res[-1].numpy[0]
+```
+
+I've also recently added regularizers (reg_type = tf.regularizers.l2 or tf.regularizers.l1) and clipping (tf.clipping.norm or just tf.clipping.clip for a clamp), which can be added like:
+
+```py
+optimizer = tf.optimizers.adam(wavefunction, beta1 = 0.0, beta2 = 0.999, reg_type = tf.regularizers.l2, reg = 0.02, clip = 0.01)
+optimizer.set_clipping_type(tf.clipping.norm)
+```
+
 ## Visualization and interactivity
 
-I really wanted a way to output computation results in real time so I decided to add a GLFW + ImGui for a window and simple GUI to the library. The way it works now is that you can create a window, create the main rendering loop, and then render the tensor as an image. You can do quite a lot of things with this. I've for example implemented 3D fractal path tracer, and a 2D fluid simulation, real time neural embedding texture visualization, etc.
+I really wanted a way to output computation results in real time so I decided to add a GLFW + ImGui for a window and simple GUI to the library. (Taichi also did this!) The way it works now is that you can create a window, create the main rendering loop, and then render the tensor as an image. You can do quite a lot of things with this. I've implemented a 3D fractal path tracer, a 2D fluid simulation, real time neural embedding texture visualization, a compute sphere rasterizer for N-body etc.
 
 ```python
 #creates a single global window (can only be one at the moment)
 tf.window.show(1280, 720, "a window")
 
-while not tf.window_should_close(): #window will close if you press the close button and this will return True
-    mx, my = tf.get_mouse_position()
-    wx, wy = tf.get_window_size()
+while not tf.window.should_close(): #window will close if you press the close button and this will return True
+    mx, my = tf.window.get_mouse_position()
+    wx, wy = tf.window.get_window_size()
 
     #simple input example
     if tf.window.is_mouse_button_pressed(tf.window.MOUSE_BUTTON_0):
@@ -862,8 +917,10 @@ while not tf.window_should_close(): #window will close if you press the close bu
         print("button pressed")
     tf.imgui.end()
 
-    #exectute a tensorfrost program that outputs a [-1, -1, 3] float32 tensor
+    #exectute a TensorFrost TensorProgram that outputs a [-1, -1, 3] float32 tensor
     img = render_image(...)
+
+    #you could also just provide a numpy array as tf.tensor(), this is usually slower tho, as it requires a GPU upload
 
     #display the image (will be stretched to the window size with nearest neighbor interpolation)
     tf.render_frame(img)
@@ -873,11 +930,37 @@ while not tf.window_should_close(): #window will close if you press the close bu
 
 ## Codegen
 
+I have also written my own code generator here, and right now C++, GLSL and HLSL are supported. Adding additional kernel languages is not very difficult. But right now I still need to refactor the host code generation, as its currently hardcoded to only do C++. The library can actually be run in a purely code generation mode if you don't need to do any work in Python and would rather integrate it into some other project:
+
+```python
+tf.initialize(tf.codegen, kernel_lang = tf.hlsl_lang) # or tf.glsl_lang for OpenGL, or tf.cpp_lang for C++
+```
+
+After you compiled all the tensor programs you need, you can get all the generated code and save it to a file:
+
+```python
+# Save all the compiled functions
+cpp_header = tf.get_cpp_header()
+all_main_functions = tf.get_all_generated_main_functions() #always in C++
+with open('tensorfrost_main.cpp', 'w') as f:
+    f.write(cpp_header)
+    for func in all_main_functions:
+        f.write(func)
+
+# Save all the compiled kernels
+all_kernels = tf.get_all_generated_kernels() #depends on the kernel_lang
+for i, kernel in enumerate(all_kernels):
+    with open('generated_kernels/kernel_{}.hlsl'.format(i), 'w') as f:
+        f.write(kernel)
+```
+
+This is also not perfect, ideally I would also provide an example implementation of a runtime, but right now it needs to be written by the user. Also in the future I'd want to compile the `TensorPrograms` into an archive, that would optionally contain code and compiled binaries, that can be loaded into python immediately. This could be quite useful for debugging code generation in the future.
+
 ## Runtimes
 
-At the moment the IR can be converted both to C++ and to shading languages like HLSL and GLSL. Right now the only available runtimes in the Python library are the CPU one which compiles a C++ library, and the GLSL one which uses OpenGL 4.6 compute shaders. 
+Right now there are only 2 runtime backends - C++/OpenMP and C++/OpenGL. After the compiler generates the C++ code for the shaders and the host, its compiled by the C++ compiler, and also by the OpenGL shader compiler (which is built in the driver and can have horrible bugs, by the way).
 
-In the future I plan to add a CUDA and Vulkan backend, and probably a WGPU one.
+I plan on also adding CUDA and Vulkan in the future, for the first one I could just compile everything host + kernels into a single `.cu` file, and its probably relatively straight forward to do, but in the case of Vulkan I would need to write all the boilerplate code for handling basic compute, compiling shaders and memory allocation.
 
 # So what can we do with this?
 
