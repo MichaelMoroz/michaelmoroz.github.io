@@ -1007,11 +1007,17 @@ One of the things that quite often happens with writing vectorized code for simp
 
 At the moment the IR does not have a representation for groupshared memory, which is a big bottleneck for large matrix multiplications, and can be quite useful for some other algorithms, like FFT/sort/convolutions.
 
-Kernels can be additionally fused at the workgroup level as a post compilation pass, which is quite complicated, and requires additional groupshared memory with group syncs, but for small neural networks it could be a massive speedup.
+Kernels can be additionally fused at the workgroup level as a post kernel fusion pass, which is quite complicated, and requires additional groupshared memory with group syncs, but for small neural networks it could be a massive speedup.
 
 Another thing that is perhaps very high in the priority list right now is to implement repeating computation eliminator, its quite troublesome to implement due to requiring some way to compare entire computation chains (by making a specific computation result node have a unique number), but would remove quite a lot of redundant cruft from the generated kernels.
 
-One nice thing, that I would like to borrow from JAX is `vmap`. Writing particle simulations in vectorized form often annoyingly require a lot of `squeeze` and `unsqueeze` operations, which could be automated, if you vectorized a single particle calculation into a target shape. In fact, I could also make the explicit `kernel` node usage assume that all its children are scalar (if not - unroll), and it would also behave similarly to `vmap` with the expection of it forcibly creating a single kernel no matter what. Implementing `vmap` is, I supect, not to difficult, as it only requires padding all the shapes of the child operation with the given shape (with some peculiarities). Syntactically it could look like `with tf.vmap(shape) as (i,j,...):`, with i,j,k being scalar at trace time, then padded with given shape.
+One nice thing, that I would like to borrow from JAX is `vmap`. Writing particle simulations in vectorized form often annoyingly require a lot of `squeeze` and `unsqueeze` operations, which could be automated if you vectorized a single particle calculation into a target shape. In fact, I could also make the explicit `kernel` node usage assume that all its children are scalar (if not - unroll), and it would also behave similarly to `vmap` with the exception of it forcibly creating a single kernel no matter what. Implementing `vmap` is, I supect, not to difficult, as it only requires padding all the shapes of the child operation with the given shape (with some peculiarities). Syntactically it could look like
+
+```py
+with tf.vmap(shape) as (i,j,...):
+  #stuff
+```
+With i,j,k being scalar at trace time, then padded with given shape.
 
 I suspect LLVM could still be put at the end of my compilation stages as an intermediate between final code generation, to do some final optimizations.
 
