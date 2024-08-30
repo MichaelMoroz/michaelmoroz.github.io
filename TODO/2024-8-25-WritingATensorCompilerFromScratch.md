@@ -986,13 +986,13 @@ One amazing thing here, is that the normals here are computed through backpropag
 
 I'll focus on comparing something thats easy to implement in both my library and in PyTorch. Things like the fluid sim or path tracer, I suspect, have no chance of running good if at all in PyTorch, JAX - maybe, but I doubt, so we'll ignore these. 
 
-Of course, something like Taichi would actually win here, but its not our comparison target, and likely after I implement automatic groupshared cache generation the performance gap might go to 0, or become better, tho I suspect probably not.
+Of course, something like Taichi would actually win here against everyone, but its not our comparison target as you cant write the simulation in vectorized tensor form there, and likely after I implement automatic groupshared cache generation the performance gap might go to 0, or become better, tho I suspect probably not.
 
 TODO: plots
 
 ## N-body simulation
 
-One of the simplest simulations you can do - is an N-body gravity simulation, which only takes a few dozen lines both in TensorFrost, JAX or PyTorch, making this a nice comparison target.
+One of the simplest simulations you can do - is an N-body gravity simulation, which only takes a few dozen lines both in TensorFrost, JAX or PyTorch, making this a nice benchmark.
 
 ## MNIST with a convolutional network
 
