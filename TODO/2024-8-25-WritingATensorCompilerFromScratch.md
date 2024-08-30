@@ -968,7 +968,7 @@ I plan on also adding CUDA and Vulkan in the future, for the first one I could j
 
 ## Fluid simulation
 
-Before all the algorithmic stuff I initially played around with simulations that map nicely to multidimensional arrays. For the most interesting example, I implemented a 2D fluid solver with a multigrid pressure solver, RK4 bicubic advection, and vorticity confinement.
+Before all the algorithmic stuff, I initially played around with simulations that map nicely to multidimensional arrays, waves and Eulerian fluids. For the most interesting example, I implemented a 2D fluid solver with a multigrid pressure solver, RK4 bicubic advection, and vorticity confinement.
 
 <center><iframe width="560" height="315" src="https://www.youtube.com/embed/CVF4cZOsMK4?si=SJsZ2R_SIe-yyXgF" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
 
