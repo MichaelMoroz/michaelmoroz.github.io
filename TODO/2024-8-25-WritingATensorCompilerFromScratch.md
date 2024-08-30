@@ -53,11 +53,11 @@ There are a lot of ideas combining graphics, physics and ML that I sometimes hav
 
 # Why make a new library?
 
-<center><img src="{{ site.baseurl }}/images/standards.png" height="400px"></center>
+<center><img src="{{ site.baseurl }}/images/standards.png" height="200px"></center>
 
 Lets begin with asking why would I even want a whole new library in the first place, this would take an insane amount of time to develop, why not use something that already exists? There are probably already like a billion of existing libraries for every possible use case, no?
 
-Of course, nothing stops me using your usual ML libraries like PyTorch or JAX, but I really dislike their distinct disconnection from native GPU programming. These libraries effectively live in their own realm with their own rules and syntax, and hide some of the features the GPU has from the user, they have almost 0 crossover with how shaders operate. While technically you can write any algorithm you want in plain tensors, including graphics and simulations, depending on the number or complexity of operations - the performance might get terrible. The performance is actually not the only issue, control flow is quite annoying to express in these libraries, if even possible, as native loops for example, require doing absolutely cursed stuff like this in JAX: 
+Of course, nothing stops me from using your usual ML libraries like PyTorch or JAX, but I really dislike their distinct disconnection from native GPU programming. These libraries effectively live in their own realm with their own rules and syntax, and hide some of the features the GPU has from the user, they have almost 0 crossover with how shaders operate. While technically you can write any algorithm you want in plain tensors, including graphics and simulations, depending on the number or complexity of operations - the performance might get terrible. The performance is actually not the only issue, control flow is quite annoying to express in these libraries, if even possible, as native loops for example, require doing absolutely cursed stuff like this in JAX: 
 
 ```py
 def factorial(n):
