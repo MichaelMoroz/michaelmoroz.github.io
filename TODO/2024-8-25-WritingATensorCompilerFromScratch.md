@@ -1,29 +1,29 @@
 ---
 layout: post
 title: Writing a tensor compiler from scratch 
-image: ShadertoyParticles.png
+image: TensorFrost.png
 ---
 
-In this blog post I want to talk about the development of a library that I started working on more than a year ago - [TensorFrost](https://github.com/MichaelMoroz/TensorFrost). Under the hood it's a static optimizing tensor compiler with a focus on being able to do more "shader-like" things while still having the ability to do high level linear algebra for ML in numpy-like syntax with automatic differentiation support.
+In this blog post I want to talk about the research and development results for a library that I started working on more than a year ago - [TensorFrost](https://github.com/MichaelMoroz/TensorFrost). Under the hood it's a static optimizing tensor compiler with a focus on being able to do more "shader-like" things while still keeping the ability to do high level linear algebra for ML in numpy-like syntax with automatic differentiation support.
 
-I started working on it 14 months ago, when I was working on neural variational monte carlo (NVMC) in Unity. After some time it became obvious that Machine Learning, let alone of this kind, is simply a no go without the required tools. To make it even remotely work I needed to cut a lot of corners. Instead of using backpropagation I used evolution strategies, the neural network was hardcoded into a single kernel (including the determinant which was computed in a single thread in the same kernel!), and the reduction operations were very primitive "loop over all elements per thread", which don't map that well to GPU's. Finding the median of an array was annoying, and I didn't bother with making a sorting algorithm, so I just found the "approximate" median, and there are probably other things I forgot about.
+I started working on it 14 months ago when I hit a wall when I was working on neural variational monte carlo in Unity (I might make a separate blog post on this). After some time it became obvious that Machine Learning, let alone of this kind, is simply a no go without the required tools. Before realizing that, to make it even remotely work I needed to cut a lot of corners. Instead of using backpropagation I used evolution strategies, the neural network was hardcoded into a single kernel (including the determinant which was computed in a single thread in the same kernel!), and the reduction operations were very primitive "loop over all elements per thread", which don't map that well to GPU's. Finding the median of an array was also annoying, as I didn't bother with making a sorting algorithm, so I just found the "approximate" median. This is not an exhaustive list of issues, it was simply that limiting to do quite literally anything there.
 
-While this did perform extremely fast for small systems (like 2-4 electrons and small network), it scaled horribly for anything larger. From some point there is just not enough registers on the GPU's streaming multiprocessor (SM) to store the entire neural network state so you really need a smart and dynamic way to combine neural network operations together in kernels that optimally use groupshared memory, unless you want to performance to drop to nearly zero.
+While this did perform extremely fast for small systems (like 2-4 electrons and small network), it scaled horribly for anything larger. From some point there is just not enough registers on the GPU's streaming multiprocessor to store the entire neural network state, so ideally you would need a smart and dynamic way to combine neural network operations together in kernels that optimally use groupshared memory, unless you want to performance to drop to nearly zero, or do it manually.
 
-Of course while I realized these problems exist - intially I thought I'd try to go forward with the old approach, and try to implement a somewhat more advanced optimization algorithm and maybe make it work *a bit* better. Since backpropagation would be so compicated for this model, I couldn't be bothered with writing it by hand in shaders - so I chose a more advanced evolution based algorithm - LM-MA-ES (Limited Memory Matrix Adaptation Evolution Strategies). It already required a lot of matrix operation. And then I decided to make a small tensor library in C# for Unity.
+Of course while I realized these problems exist - intially I thought I'd try to go forward with the old approach, and try to implement a somewhat more advanced optimization algorithm and maybe make it work *a bit* better. Since backpropagation would be just that compicated for this model, I couldn't be bothered with writing it by hand in shaders - so I chose a more advanced evolution based algorithm - LM-MA-ES (Limited Memory Matrix Adaptation Evolution Strategies). It already required a lot more kernels to implement the matrix operations, so I decided to make a small tensor library in C# for Unity.
 
-As you might have already guessed, it turned out to be the complete opposite of **"small"**, and it instead transformed into having a lot more tools and features than I originally anticipated (hello scope creeep 👋).
+Long story short, I didn't actually get to implement LM-MA-ES, and instead that library turned out to be the complete opposite of **"small"**, and instead transformed something with a lot more tools and features than I originally anticipated (hello scope creeep 👋).
 
 The thing is, this [isn't](https://github.com/MichaelMoroz/TensorCL) the first time I tried to make a tensor library. That one I did in OpenCL a whole 5 years ago, when I was still in the 3rd year of uni. At that point I didn't really know how to do kernel fusion or any other compiler-like optimization techniques so in the end I dropped the project since there wasn't anything particularly useful you could do with it (and I had no clue how to debug issues there). It did have backwards mode autodifferentiation that used a operation tape, but the performance of doing every operation one kernel at a time was just too bad for the stuff I usually do.
-(Interestingly enough, the initial reason I started working on it was quite similar to the one for making this new library, I wanted to implement a neural potential energy surface for modelling molecules)
+Interestingly enough, the primary reason I started working on it was a bit similar to the one for making this new library, I wanted to implement a neural potential energy surface for modeling molecule dynamics. There was also the other reason, I did not have a Nvidia GPU to use any proper ML library at the time, as I was literally too poor to buy one, so my only option was OpenCL 💀.
 
-This time I knew, if I wanted to make a library like that, the only way to keep it alive long enough is by making it useful for pet projects I often make. Like graphics, simulations, etc. If you've seen my [Shadertoy page](https://www.shadertoy.com/user/michael0884) - it is essentially what I'm talking about. And ideally, it should be at least able to work at similar performance. 
+This time I knew, if I wanted to make a library like that again, the only way to keep it alive long enough is by first making it useful for pet projects I often make, and only then adding everything else. Projects like graphics, simulations, etc, if you've seen my [Shadertoy page](https://www.shadertoy.com/user/michael0884) - stuff like that. And ideally it should be able to work at similar performance. 
 
-There are a lot of ideas I sometimes have witch are simply too bothersome to implement in pure shaders, so I almost never touched machine learning related stuff apart of some things that are simple enough to port to shaders, like some [really simple Neural Implicit Representations](https://www.shadertoy.com/view/DstGDX). So I hoped that this library would make it more reachable.
+There are a lot of ideas combining graphics, physics and ML that I sometimes have witch are simply too bothersome to implement in pure shaders, so I almost never touched machine learning related stuff apart of some things that are simple enough to port to shaders, like [Neural Implicit Representations](https://www.shadertoy.com/view/DstGDX). So I hoped that this library would make it more reachable for me.
 
 > Disclaimer: I should say that the current state of the library is still far from being production ready, and at this point I would strongly recommend not to use this for any serious projects. Also given that this is pretty much my first time writing a compiler, there are probably both wrong architectural choices, as well as just simply wrong assumptions.
 
-- [The beggining of the end](#the-beggining-of-the-end)
+- [Why make a new library?](#why-make-a-new-library)
 - [Architecture](#architecture)
   - [Kernel fusion](#kernel-fusion)
   - [First prototype](#first-prototype)
@@ -51,9 +51,11 @@ There are a lot of ideas I sometimes have witch are simply too bothersome to imp
 - [Future improvements](#future-improvements)
 - [Conclusion](#conclusion)
 
-# The beggining of the end
+# Why make a new library?
 
-Lets start with asking why would I even want a whole new library in the first place, this would take an insane amount of time to develop, why not use something that already exists?
+<center><img src="{{ site.baseurl }}/images/standards.png" height="400px"></center>
+
+Lets begin with asking why would I even want a whole new library in the first place, this would take an insane amount of time to develop, why not use something that already exists? There are probably already like a billion of existing libraries for every possible use case, no?
 
 Of course, nothing stops me using your usual ML libraries like PyTorch or JAX, but I really dislike their distinct disconnection from native GPU programming. These libraries effectively live in their own realm with their own rules and syntax, and hide some of the features the GPU has from the user, they have almost 0 crossover with how shaders operate. While technically you can write any algorithm you want in plain tensors, including graphics and simulations, depending on the number or complexity of operations - the performance might get terrible. The performance is actually not the only issue, control flow is quite annoying to express in these libraries, if even possible, as native loops for example, require doing absolutely cursed stuff like this in JAX: 
 
@@ -74,7 +76,7 @@ def factorial(n):
 
 Such native loops are required if you want a varying iteration count for some operaiton, in simulations this could be, for example, a summing a force from a varying number of particle neighbors. From a purely ML standpoint, this isn't really a problem, since such cases practically never happen, and on top of that, gradients of such loops might potentially have atrocious performance (or might just be uncomputable if the loop can be infinite). 
 
-You could alternatively write a dynamic mask that will depend on the iteration, and unroll the loop, but this would simply be slower and less readable. Like here I once tried to make a vectorized Numpy function to compute the mandelbulb SDF:
+You could alternatively write a dynamic mask that will depend on the iteration, and unroll the loop, but this would simply be slower and less readable. Like here, I once tried to make a vectorized Numpy function to computes the mandelbulb SDF:
 
 ```py
 def mandelbulb_sdf(pos, iter_num=mandelbulb_iter_num, power=mandelbulb_power):
@@ -280,7 +282,7 @@ It does pose the question of what to do when doing a hybrid autodiff, like backw
 
 ### IR under the hood
 
-Let's look at how the IR looks in the compiler right now. We will look at the bitonic sort example at first to see how control flow is represented in the IR.
+Let's look at how the IR looks in the compiler right now. We will look at the bitonic sort example from above to see how control flow is represented in the IR.
 
 <details>
 <summary>Parsed/traced input</summary>
@@ -519,7 +521,7 @@ int step = loop(inputs=[v1_14(0),steps,v1_13(1)], cost=141.000000, )
 </details>
 
 
-For the most part, the IR here is unchanged, but we have some differences. With the exception of the obviously created kernel under the loop node, we also see that `dim_id` nodes, which represented the index of an element at this dimension, are replaced with `block_id` and `block_thread_id`, on a GPU, for instance, those map to the workgroup index and the internal 3D workgroup thread indices. I didn't go with a single 1D workgroup thread index, since its somewhat easier to read if it maps directly to how compute shaders are written, but this wasn't really necessary. Additionally the shader compiler might in theory better compile the generated code.
+For the most part, the IR here is unchanged, but we have some differences. With the exception of the obviously created kernel under the loop node, we also see that `dim_id` nodes, which represented the index of an element at this dimension, are replaced with `block_id` and `block_thread_id`, on a GPU, for instance, those map to the workgroup index and the internal 3D workgroup thread indices. I didn't go with a single 1D workgroup thread index, since its somewhat easier to read the generated kernel code, if it maps directly to how compute shaders are written, but this wasn't really necessary. Additionally the shader compiler might in theory better compile the generated code.
 
 Also notably, by default the compiler clamps all indexing operations to the shape of the `memory` input to avoid undefined behaviour. Some internal operations can avoid doing this to not do useless work, but I also plan to give the user access to how the indices could be computed under the hood.
 
@@ -664,9 +666,9 @@ kernel(cost=0.000000, shape=[v1_0,N], )
 </div>
 </details>
 
-As you can see, it not only fused the `pow` at the end of the matrix multiplication, but also fused the transposition with the sin/cos operations into the summation loop. While this impressively created only a single kernel, this isn't actually super optimal. Matrix multiplcation is often bottlenecked by arithmetic, not just by memory access. And we effectively instead of doing sin/cos N^2 times, do them N^3 times now! This is something that I still need to fine tune in the fusion heuristics algorithm. In the future though, if you could use groupshared caches - it would be fine enough to do fuse these computations at the matrix "block" load stage, this should be enough to significantly reduce the overhead of doing additional sin/cos, as now we do them only for each "block" of the matrix, not for each product. But I would suspect that for huge matrices, these precomputations will still be a bottleneck, and need to be forcibly unfused.
+As you can see, it not only fused the `pow` at the end of the matrix multiplication, but also fused the transposition with the sin/cos operations into the summation loop. While this impressively created only a single kernel, this isn't actually super optimal. Matrix multiplcation is often bottlenecked by arithmetic, not just by memory access. And we effectively instead of doing sin/cos N^2 times, do them N^3 times now! This is something that I still need to fine tune in the fusion heuristics algorithm. In the future though, if you could use groupshared caches - it would be fine enough to do the fusion of these input computations at the matrix "block" load stage, this should be enough to significantly reduce the overhead of doing additional sin/cos, as now we do them only for each "block" of the matrix, not for each product. But I would suspect that for huge matrices, these precomputations will still be a bottleneck, and need to be forcibly unfused. So yes, fewer kernels doesn't actually mean better sometimes.
 
-Also unfotrunately the compiler currently prefers to fuse layer activations into the matmul loop instead of keeping them at the end of the previous layer matmul, this once again needs to be fine tuned in the heuristics.
+Also unfotrunately the current compiler version prefers to fuse layer activations into the matmul loop instead of keeping them at the end of the previous layer matmul, this once again needs to be fine tuned with better heuristics.
 
 # Python frontend
 
@@ -690,24 +692,26 @@ def matmul():
     return C
 ```
 
-This will be the core of our TensorProgram. You probably noticed that it doesn't have arguments, right now its a rather ad-hoc way to give the ability to restrict shapes of some inputs to other inputs. Technically I could just parse the function python representation and generate `tf.input()` automatically, but in either case, you will still need to apply `tf.assert_tensor` to enforce their shape. 
+This will be the core of a `TensorProgram`. You probably noticed that it doesn't have arguments, right now its a rather ad-hoc way to give the ability to restrict shapes of some inputs to other inputs. Technically I could just parse the function python representation and generate `tf.input()` automatically, but in either case, you will still need to apply `tf.assert_tensor` to enforce their shape. 
 
-You are probably already asking why its done is such a weird way, but the main goal was the ability to have undefined tensor shapes at compile time, this way you don't need to recompile the program every time your input changes. This as you can see does add some restrictions, since if you don't do these shape `assertions` the compiler might not be able to figure out that A and B can actually be multiplied together and will throw an error, for example. I could have gone with the "assume everything is compatible" route and added assertions in the generated IR automatically before applying the operation, but I suspected such behavour might have very annoying unintended behaviours and could also result in fusion of parts of code that shouldn't have, which would either be wrong, or create assertions that might never be valid and always throw errors. Of course, you can still have the shapes as constants everywhere, in that case this becomes rather annoying to work with. I suspect that in the future I'll add support for both automatically reading the function arguments and manual specification like here.
+You are probably already asking why its done is such a weird way, but the main goal was the ability to have undefined tensor shapes at compile time, this way you don't need to recompile the program every time your input changes. This, as you can see, does add some restrictions, since if you don't do these shape `assertions` the compiler might not be able to figure out that A and B can actually be multiplied together and will throw an error. I could also have gone with the "assume everything is compatible" route and added assertions in the generated IR automatically before applying the operation, but I suspected such behaviour might have very annoying unintended consequences and could also result in fusion of parts of code that shouldn't have fused, which would either be wrong, or create assertions that might never be valid and always throw errors. Of course, you can still have the shapes as constants everywhere, in that case this particular quirk becomes rather annoying and more of a hindrence. I suspect that in the future I'll add support for both automatically reading the function arguments and manual specification like here.
 So yeah, the input shape of these `tf.input()` operations can be `-1` for unspecified, and `>0` for explicitly specified. In some cases having explicit shape might improve performance, as the compiler could do staged reductions and the like.
 
-The way the IR is currently generated is by tracing the python function, which is significantly easier than parsing python AST. This does have some interesting side effects. If you do any sort of control flow inside this function, you can only do it with python values, and on top of that, the result will be unrolled and fixed at compile time. 
+The way the IR is currently generated is by tracing the Python function, which is significantly easier than parsing Python AST. This does have some interesting side effects. If you do any sort of control flow inside this function, you can only do it with python values, and on top of that, the result will be unrolled and fixed at compile time. 
 
 In fact, all variables, N, M, A, B, etc - are not actual tensors, but abstractions in the IR, and don't have a value yet. So doing any kind of print would result in abstract info being spat out, and conversion into Numpy or any other python type would simply be impossible.
 
-As I wanted to have control flow in the IR, I either needed to parse Python AST, or somehow overload existing Python behavour. Initially, all scoped operations, like `if` or `loop` took a python function as input, which was quite ugly and very unreadable for deep code. But then I discovered that you can actually overload context manager behavour. I found this trick in [a library for python based shader generation](https://github.com/ppenenko/metashade). This means that I can have custom calls at the beginning and end of a section of code, and I could automatically put it as a child scope.
-This is what I did, and I overloaded these for some tensor types, so now you can do contol flow in nicer way! (Arguably still cursed, since now we have 2 ways to make control flow, with different results)
+As I wanted to have control flow in the IR, I either needed to parse Python AST, or somehow overload existing Python behavour. Initially, all scoped operations, like `if` or `loop` took a python function as input, which was quite ugly and very unreadable for deep code, in the same way JAX does it, pretty much. But then I discovered that you can actually overload context manager behavour. I found this trick in [a library for python based shader generation](https://github.com/ppenenko/metashade). This means that I can have custom calls at the beginning and end of a section of code, and I could automatically put it as a child scope.
+This is what I did, and I overloaded these for some tensor types, so now you can do contol flow in a nicer way! (Arguably still cursed, since now we have 2 ways to make control flow, with different results, not even mentioning that you need to use the `.set()` method or `.val` property of a tensor to set its value from these child scopes, as Python doesn't allow you to overload `=` operators, and also scatters and stores are fine too) 
 
 ```py
+a = tf.const(0.0)
 with tf.if_cond(A == B):
-  #stuff
+  a.val += 1.0
 
+m = tf.const(-1e10)
 with tf.loop(begin, end, step) as iteration:
-  #stuff
+  m.val = tf.max(m, data[iteration])
 
 ```
 
@@ -720,12 +724,37 @@ with tf.kernel([M, N, K]) as (i,j,k):
 
 ## Host code
 
+Before anything, you should initialize the backend which will be used, like this:
+
+```py
+tf.initialize(tf.cpu) #or tf.opengl
+```
+
+Additionally you can provide the compiler flag for the C++ compiler, like for example:
+
+```py
+tf.initialize(tf.cpu, "-g") #or /Di on Windows
+```
+
 After you wrote the main function you can compile it into a `TensorProgram` like this
 
 ```py
 matmul_compiled = tf.compile(matmul)
 ```
 
+This traces the function into the IR, compiles the IR into kernel form, converts that into C++/Kernel code, compiles that, and links the compiled library at runtime.
+One of the fun (not) things about this on Windows, is that this requires the Visual Studio compiler installed, and on top of that its **SLOW** as hell, usually at 20x-50x of the IR compilation time. The compiler requires some totally cursed things to set up the env variables to even work, and the generated command ends up looking like this:
+
+```cpp
+ ss << "powershell -command \"$VisualStudioPath = & \\\"${Env:ProgramFiles(x86)}\\Microsoft Visual Studio\\Installer\\vswhere.exe\\\" -latest -products * -property installationPath; & cmd.exe /C \\\"\"\\\"\\\"$VisualStudioPath\\VC\\Auxiliary\\Build\\vcvarsall.bat\\\"\\\" x64 && cl "
+       << kernel_compile_options << " /LD " << tempPath
+       << sourcePath << " /Fe:" << dllName
+       << "\"\"\\\"\"";
+```
+
+I have no clue what is going on here, and thankfully I wansn't the one who wrote this. At least it works. 
+
+Linux users win with their `gcc` in that regard, which is usually also already installed too.
 The `TensorProgram` objects take and output `TensorMemory` buffer objects, which can be created from numpy arrays like this.
 
 ```python
@@ -868,13 +897,15 @@ TODO: mnist, texture embedder
 
 # What's the performance compared to other tensor libraries?
 
+I'll focus on comparing something thats easy to implement in both my library and in PyTorch.
+
 ## N-body simulation
 
 ## MNIST with a convolutional network
 
 # Future improvements
 
-One of the things that is quite often happening with writing vectorized code for simple particle simulations is that all the vector variables are 3d, and can easily be stored in registers, but the current compiler will generate it as a [..., a, b, 3] shaped kernel with a lot of duplicated arithmetic (unless you create your own vec class that operates only on scalars), like in [the n-body simulation example](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/n-body.ipynb). This is something that could be optimized in the future, by generating the initial kernel with a smaller shape, like [..., a, b, 1] and then unrolling the dimensions that are broadcast compared to the kernel's shape.
+One of the things that quite often happens with writing vectorized code for simple particle simulations is that all the vector variables are 3d, and can easily be stored in registers, but the current compiler will generate it as a [..., a, b, 3] shaped kernel with a lot of duplicated arithmetic (unless you create your own vec class that operates only on scalars), like in [the n-body simulation example](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/n-body.ipynb). This is something that could be optimized in the future, by generating the initial kernel with a smaller shape, like [..., a, b, 1] and then unrolling the dimensions that are broadcast compared to the kernel's shape.
 
 At the moment the IR does not have a representation for groupshared memory, which is a big bottleneck for large matrix multiplications, and can be quite useful for some other algorithms, like FFT/sort/convolutions.
 
