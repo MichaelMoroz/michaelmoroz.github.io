@@ -1240,8 +1240,8 @@ However, this is still nowhere near what a hand-tuned shader version of this wou
 
 [--Link to equivalent PyTorch example--](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/ML/MNIST/pytorch.py)
 
-After I implemented module support with the optimizers, first thing I implemented is a convolutional neural net for the Fashion MNIST classification problem.
-This is a more classic ML problem and you would probably expect for PyTorch to just straight up win every time. Turns out, actually no, for small network sizes, TensorFrost can actually have a significant win, but I do suspect it might be related simply to either having way less overhead or not loading the traning batch through the CPU, which can kill perf a lot. Other than that, here there isn't that much you can fuse to gain a lot of performance from.
+After I implemented module support with the optimizers, first thing I made is a convolutional neural net for the Fashion MNIST classification problem.
+This is a more classic ML problem and you would probably expect for PyTorch to just straight up win every time. Turns out, actually no, for small network sizes, TensorFrost can actually have a significant win.
 
 Here is a comparison of the number of training iterations per second for the same minibatch size of `128` and with the same(ish) ADAM optimizer, for TensorFrost and for PyTorch
 
