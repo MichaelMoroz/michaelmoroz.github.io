@@ -1236,11 +1236,14 @@ However, this is still nowhere near what a hand-tuned shader version of this wou
 
 ## MNIST with a convolutional network
 
-[--Link to TensorFrost example---]()
-[--Link to equivalent PyTorch example--]()
+[--Link to TensorFrost example---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/ML/MNIST/module.py)
+[--Link to equivalent PyTorch example--](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/ML/MNIST/pytorch.py)
 
 After I implemented module support with the optimizers, first thing I implemented is a convolutional neural net for the Fashion MNIST classification problem.
-This is a more classic ML problem and you would probably expect for PyTorch or JAX to just straight up win every time. Turns out, actually no, for small network sizes, TensorFrost can actually have a significant win, but I do suspect it might be related simply to either having way less overhead or not loading the traning batch through the CPU, which can kill perf a lot.
+This is a more classic ML problem and you would probably expect for PyTorch or JAX to just straight up win every time. Turns out, actually no, for small network sizes, TensorFrost can actually have a significant win, but I do suspect it might be related simply to either having way less overhead or not loading the traning batch through the CPU, which can kill perf a lot. Other than that, here there isn't that much you can fuse to gain a lot of performance from.
+
+Here is a comparison of the number of training iterations per second for the same batch size of `128`
+
 
 ## What about some more advanced models?
 
