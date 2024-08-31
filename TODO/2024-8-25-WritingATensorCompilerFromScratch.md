@@ -996,7 +996,7 @@ TODO: plots
 
 One of the simplest simulations you can do - is an N-body gravity simulation, which only takes a few dozen lines both in TensorFrost, JAX or PyTorch, making this a nice benchmark.
 
-<center><img src="{{ site.baseurl }}/images/n-body-bench.png" height="300px"></center>
+<center><img src="{{ site.baseurl }}/images/n-body-bench.png" height="400px"></center>
 
 ## MNIST with a convolutional network
 
