@@ -1289,7 +1289,7 @@ First of all, given that it took me 14th month just to get to this point, the co
 
 Jokes aside, it is actually a really interesting learning experience. In fact, given the performance tests from above, if you properly improved the performance of the algorithmic primitives I use, like reductions and matmuls, and added more backends like CUDA, this library or a new version of it might become a viable choice for actual ML applications.
 
-<center><img src="{{ site.baseurl }}/images/high_low.png" height="250px"></center>
+<center><img src="{{ site.baseurl }}/images/high_low.PNG" height="250px"></center>
 
 However in the current state, it mostly takes a niche right in the middle between "low-level GPU" stuff and "high level ML".
 
