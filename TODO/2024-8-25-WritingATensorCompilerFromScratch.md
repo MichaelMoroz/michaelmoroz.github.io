@@ -48,6 +48,7 @@ There are a lot of ideas combining graphics, physics and ML that I sometimes hav
   - [Fluid simulation](#fluid-simulation)
   - [Path tracer](#path-tracer)
   - [Texture embedder with small neural network](#texture-embedder-with-small-neural-network)
+  - [N-body SPH with a custom sphere rasterizer](#n-body-sph-with-a-custom-sphere-rasterizer)
 - [What's the current performance compared to other tensor libraries?](#whats-the-current-performance-compared-to-other-tensor-libraries)
   - [N-body simulation](#n-body-simulation)
   - [MNIST with a convolutional network](#mnist-with-a-convolutional-network)
@@ -985,6 +986,10 @@ One amazing thing here, is that the normals here are computed through backpropag
 
 <center><iframe width="560" height="315" src="https://www.youtube.com/embed/7uzuGftSYKk?si=xt17EQguu4pg_PlV" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
 
+## N-body SPH with a custom sphere rasterizer
+
+<center><iframe width="560" height="315" src="https://www.youtube.com/embed/AxkabWearoA?si=mz5ZBtK1B1gh4z2L" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
+
 # What's the current performance compared to other tensor libraries?
 
 I'll focus on comparing things that are easy to implement in both my library and in PyTorch/JAX. Things like the fluid sim or path tracer, I suspect, have no chance of running good if at all in PyTorch, JAX however might work fine with vmap, but I'm not sure, so for these tests, I'll ignore these use cases, as they will not be easy to port to them anyway, given the quite different syntax. 
@@ -1004,7 +1009,7 @@ This is a more classic ML problem and you would probably expect for PyTorch or J
 
 ## What about some more advanced models?
 
-While I could have tested those, I can pretty much guarantee that for anything that has its bottleneck in matrix multiplications I will very likely lose, at least [without implementing automation of more advanced optimizations](https://siboehm.com/articles/22/CUDA-MMM)
+While I could have tested those, I can pretty much guarantee that for anything that has its bottleneck in matrix multiplications or other linear algorithms TensorFrost will very likely lose, at least [without implementing automation of more advanced optimizations](https://siboehm.com/articles/22/CUDA-MMM) or just calling external BLAS libraries like cuBLAS, which is doable, but I unfortuanately don't have enough time to implement everything immediately, so I focus more on just the compiler itself.
 
 # Future improvements
 
