@@ -1237,6 +1237,7 @@ However, this is still nowhere near what a hand-tuned shader version of this wou
 ## MNIST with a convolutional network
 
 [--Link to TensorFrost example---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/ML/MNIST/module.py)
+
 [--Link to equivalent PyTorch example--](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/ML/MNIST/pytorch.py)
 
 After I implemented module support with the optimizers, first thing I implemented is a convolutional neural net for the Fashion MNIST classification problem.
@@ -1246,13 +1247,15 @@ Here is a comparison of the number of training iterations per second for the sam
 
 <center><img src="{{ site.baseurl }}/images/MNISTbench.png" height="400px"></center>
 
-For really tiny networks there is a large win, and the more channels/neurons are use - performance drops linearly, and at around 8-32-128 becomes slower than eager mode PyTorch. I also have tried compiled PyTorch, but it somehow became slower, did they mistakingly fuse some things incorrectly? I don't know. I also haven't tried JAX here, but I suspect its probably somewhat faster than PyTorch.
+For really tiny networks there is a large win, and the performance drops linearly with more channels/neurons, and at around 8-32-128 becomes slower than eager mode PyTorch. I also have tried compiled PyTorch, but it somehow became slower, did they mistakingly fuse some things incorrectly? I don't know. I also haven't tried JAX here, but I suspect its probably somewhat faster than PyTorch. I also wonder if you can compile a training step in PyTorch, thats something that TensorFrost does by defaut, and it's not a very fair comparison without it.
 
 Honestly speaking, I'm not sure If the win that TensorFrost has at small sizes is due to just having less overhead, or due to better kernels at small size. It might also be that the training step in PyTorch has huge overhead for the minibatch creation. In TensorFrost I have the entire dataset on GPU and use it directly without intermediate steps.
 
+*PS. It's pretty annoying to benchmark these, as I usually work on Windows (arguably better for graphics dev), rather than on Linux, and the compiled GPU versions of JAX/PyTorch are only available on Linux. TensorFrost works on both platforms, and it is actually easier to port from Windows to Linux than the other way around*
+
 ## What about some more advanced models?
 
-While I could have also tested something like LLM's or diffusion models, I can pretty much guarantee that for anything that has its bottleneck in matrix multiplication or other linear algebra algorithms TensorFrost will very likely lose by a lot, at least [without implementing automation of more advanced optimizations](https://siboehm.com/articles/22/CUDA-MMM) or without just calling external BLAS libraries like cuBLAS, which is doable, but I unfortuanately don't have enough time to implement everything I'd like, so I focus more on just the compiler itself as its more important for my use cases.
+While I could have also tested something like LLM's or diffusion models, I can pretty much guarantee that for anything that has its bottleneck in matrix multiplication or other linear algebra algorithms TensorFrost will very likely lose by a lot, at least [without implementing automation of more advanced optimizations](https://siboehm.com/articles/22/CUDA-MMM) or without just calling external BLAS libraries like cuBLAS, which is doable, but I unfortuanately don't have enough time to do that, as I focus more on just the compiler itself because its more important for my use cases.
 
 # Future improvements
 
