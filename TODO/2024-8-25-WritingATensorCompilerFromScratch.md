@@ -23,7 +23,7 @@ This time I knew, if I wanted to make a library like that again, the only way to
 
 There are a lot of ideas combining graphics, physics and ML that I sometimes have witch are simply too bothersome to implement in pure shaders, so I almost never touched machine learning related stuff apart of some things that are simple enough to port to shaders, like [Neural Implicit Representations](https://www.shadertoy.com/view/DstGDX). So I hoped that this library would make it more reachable for me.
 
-> Disclaimer: I should say that the current state of the library is still far from being production ready, and at this point I would strongly recommend not to use this for any serious projects. Also given that this is pretty much my first time writing a compiler, there are probably both wrong architectural choices, as well as just simply wrong assumptions.
+> Disclaimer: I should say that the current state of the library is still far from being production ready, and at this point I would strongly recommend not to use this for any serious projects. It is very likely that there will be breaking updates in the future, as a lot of the code is not finilized. Also given that this is pretty much my first time writing a compiler, there are probably both wrong architectural choices, as well as just simply wrong assumptions.
 
 - [Why make a new library?](#why-make-a-new-library)
 - [Architecture](#architecture)
@@ -995,6 +995,8 @@ TODO: plots
 ## N-body simulation
 
 One of the simplest simulations you can do - is an N-body gravity simulation, which only takes a few dozen lines both in TensorFrost, JAX or PyTorch, making this a nice benchmark.
+
+<center><img src="{{ site.baseurl }}/images/n-body-bench.png" height="300px"></center>
 
 ## MNIST with a convolutional network
 
