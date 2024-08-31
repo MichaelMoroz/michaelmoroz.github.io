@@ -1204,8 +1204,6 @@ It is *very* bad, but this is quite expected, we aren't fusing any kernels here.
 The results here are quite surprising, first of all, the compiled version of the function both in Torch and JAX are very close to what TensorFrost achieves here, which I actually didn't expect, in some cases they even win, like ~1000 particles.  But they still scale slightly worse than the TensorFrost version of the same code curiously. Do they employ some staged reduction here? 
 TensorFrost doesn't actually fuse these operations 100% optimally here, the final generated kernel does 1 thread per each resulting component of the force. Ideally you'd do a single loop for all components, as they easily fit in the registers, and you remove a lot of wasted computations. This is the `explicit loop` version of the same calculations. The code looks like this:
 
-Of course, something like Taichi would actually win here against everyone, but its not our comparison target as you can't write the simulation in vectorized tensor form there, and likely after I implement automatic groupshared cache generation the performance gap might go to 0, or become better, tho I suspect probably not without some really advanced heuristics.
-
 ```py
 Fi = tf.buffer([N, 3], tf.float32)
 
@@ -1233,6 +1231,8 @@ Xnew = X + Vnew * 0.001
 And unsurprisingly it absolutely demolishes every other contestant by a factor 2-3x at the cost of uglier code.
 
 However, this is still nowhere near what a hand-tuned shader version of this would do. As you can actually do block reductions here. Preload a range of particles into groupshared, then do the force computation for this block, and repeat for the next blocks. You can actually do even better, if you preload something like 4-8 particles into registers, and compute their forces from there, leading to a staged block algorithm. This is how you usually try to optimize reductions that reuse a lot of memory, like [matrix multiplications](https://siboehm.com/articles/22/CUDA-MMM). 
+
+Of course, something like Taichi would actually win here against everyone, but its not our comparison target as you can't write the simulation in vectorized tensor form there, and likely after I implement automatic groupshared cache generation the performance gap might go to 0, or become better, tho I suspect probably not without some really advanced heuristics.
 
 ## MNIST with a convolutional network
 
