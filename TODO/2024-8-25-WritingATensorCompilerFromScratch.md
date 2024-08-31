@@ -1242,11 +1242,13 @@ However, this is still nowhere near what a hand-tuned shader version of this wou
 After I implemented module support with the optimizers, first thing I implemented is a convolutional neural net for the Fashion MNIST classification problem.
 This is a more classic ML problem and you would probably expect for PyTorch to just straight up win every time. Turns out, actually no, for small network sizes, TensorFrost can actually have a significant win, but I do suspect it might be related simply to either having way less overhead or not loading the traning batch through the CPU, which can kill perf a lot. Other than that, here there isn't that much you can fuse to gain a lot of performance from.
 
-Here is a comparison of the number of training iterations per second for the same batch size of `128` for TensorFrost and for PyTorch
+Here is a comparison of the number of training iterations per second for the same minibatch size of `128` and with the same(ish) ADAM optimizer, for TensorFrost and for PyTorch
 
 <center><img src="{{ site.baseurl }}/images/MNISTbench.png" height="400px"></center>
 
 For really tiny networks there is a large win, and the more channels/neurons are use - performance drops linearly, and at around 8-32-128 becomes slower than eager mode PyTorch. I also have tried compiled PyTorch, but it somehow became slower, did they mistakingly fuse some things incorrectly? I don't know. I also haven't tried JAX here, but I suspect its probably somewhat faster than PyTorch.
+
+Honestly speaking, I'm not sure If the win that TensorFrost has at small sizes is due to just having less overhead, or due to better kernels at small size. It might also be that the training step in PyTorch has huge overhead for the minibatch creation. In TensorFrost I have the entire dataset on GPU and use it directly without intermediate steps.
 
 ## What about some more advanced models?
 
