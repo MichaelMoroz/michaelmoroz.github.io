@@ -1240,10 +1240,13 @@ However, this is still nowhere near what a hand-tuned shader version of this wou
 [--Link to equivalent PyTorch example--](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/ML/MNIST/pytorch.py)
 
 After I implemented module support with the optimizers, first thing I implemented is a convolutional neural net for the Fashion MNIST classification problem.
-This is a more classic ML problem and you would probably expect for PyTorch or JAX to just straight up win every time. Turns out, actually no, for small network sizes, TensorFrost can actually have a significant win, but I do suspect it might be related simply to either having way less overhead or not loading the traning batch through the CPU, which can kill perf a lot. Other than that, here there isn't that much you can fuse to gain a lot of performance from.
+This is a more classic ML problem and you would probably expect for PyTorch to just straight up win every time. Turns out, actually no, for small network sizes, TensorFrost can actually have a significant win, but I do suspect it might be related simply to either having way less overhead or not loading the traning batch through the CPU, which can kill perf a lot. Other than that, here there isn't that much you can fuse to gain a lot of performance from.
 
-Here is a comparison of the number of training iterations per second for the same batch size of `128`
+Here is a comparison of the number of training iterations per second for the same batch size of `128` for TensorFrost and for PyTorch
 
+<center><img src="{{ site.baseurl }}/images/MNISTbench.png" height="400px"></center>
+
+For really tiny networks there is a large win, and the more channels/neurons are use - performance drops linearly, and at around 8-32-128 becomes slower than eager mode PyTorch. I also have tried compiled PyTorch, but it somehow became slower, did they mistakingly fuse some things incorrectly? I don't know. I also haven't tried JAX here, but I suspect its probably somewhat faster than PyTorch.
 
 ## What about some more advanced models?
 
@@ -1282,6 +1285,6 @@ In fact, while I'm nowhere near the "end" goal I have in mind, which is somewhat
 
 ---
 
-<details><summary>TensorFrost?</summary><p>
+<details><summary>Why TensorFrost?</summary><p>
 The name was chosen from "tensor" + my surname translated from Ukrainian to English. I know, its not super creative, given how many TensorSomething already exist. Also there is the funny problem that LLM's mistakingly assume its TensorFlow. Perhaps I should do `import TensorFrost as fr` instead of `as tf` in my examples.
 </p></details>
