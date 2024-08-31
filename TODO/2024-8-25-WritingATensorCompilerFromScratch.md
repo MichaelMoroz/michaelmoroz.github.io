@@ -1174,8 +1174,6 @@ The second part of this example is the rendering, which was also written purely 
 
 I'll focus on comparing things that are easy to implement in both my library and in PyTorch/JAX. Things like the fluid sim or path tracer, I suspect, have no chance of running good if at all in PyTorch, JAX however might work fine with vmap, but I'm not sure. For these tests, I'll ignore these use cases, as they will not be easy to port to them anyway, given the quite different syntax (as I didn't write those vectorized, but more in "shader-like" code)
 
-Of course, something like Taichi would actually win here against everyone, but its not our comparison target as you can't write the simulation in vectorized tensor form there, and likely after I implement automatic groupshared cache generation the performance gap might go to 0, or become better, tho I suspect probably not without some really advanced heuristics.
-
 ## N-body simulation
 
 [---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/n-body-benchmark.py)
@@ -1205,6 +1203,8 @@ It is *very* bad, but this is quite expected, we aren't fusing any kernels here.
 
 The results here are quite surprising, first of all, the compiled version of the function both in Torch and JAX are very close to what TensorFrost achieves here, which I actually didn't expect, in some cases they even win, like ~1000 particles.  But they still scale slightly worse than the TensorFrost version of the same code curiously. Do they employ some staged reduction here? 
 TensorFrost doesn't actually fuse these operations 100% optimally here, the final generated kernel does 1 thread per each resulting component of the force. Ideally you'd do a single loop for all components, as they easily fit in the registers, and you remove a lot of wasted computations. This is the `explicit loop` version of the same calculations. The code looks like this:
+
+Of course, something like Taichi would actually win here against everyone, but its not our comparison target as you can't write the simulation in vectorized tensor form there, and likely after I implement automatic groupshared cache generation the performance gap might go to 0, or become better, tho I suspect probably not without some really advanced heuristics.
 
 ```py
 Fi = tf.buffer([N, 3], tf.float32)
