@@ -51,6 +51,7 @@ There are a lot of ideas combining graphics, physics and ML that I sometimes hav
 - [What's the current performance compared to other tensor libraries?](#whats-the-current-performance-compared-to-other-tensor-libraries)
   - [N-body simulation](#n-body-simulation)
   - [MNIST with a convolutional network](#mnist-with-a-convolutional-network)
+  - [What about some more advanced models?](#what-about-some-more-advanced-models)
 - [Future improvements](#future-improvements)
 - [Conclusion](#conclusion)
 
@@ -166,7 +167,7 @@ In multi-level linked lists kernel fusion becomes slightly more tricky, but effe
 
 <center><img src="{{ site.baseurl }}/images/multilevel.png" height="300px"></center>
 
-The kernels are effectively also represented in the same IR, as children of a "kernel" node. At the code generation stage, everything outside of the kernel nodes is converted into host code (right now C++), and the kernels are converted into device code (OpenMP C++ or GLSL/HLSL). This way the entire program is represented in a single IR, and the compiler can optimize it globally both for CPU and GPU parts.
+The kernels are also represented in the same IR, as children of a "kernel" node. At the code generation stage, everything outside of the kernel nodes is converted into host code (right now C++), and the kernels are converted into device code (OpenMP C++ or GLSL/HLSL). This way the entire program is represented in a single IR, and the compiler can optimize it globally both for CPU and GPU parts.
 
 Since the IR is the same for all compilation stages, you could for example input both high level tensor operations together with explicitly specified kernels, and it can already be done like this:
 
@@ -990,8 +991,6 @@ I'll focus on comparing things that are easy to implement in both my library and
 
 Of course, something like Taichi would actually win here against everyone, but its not our comparison target as you cant write the simulation in vectorized tensor form there, and likely after I implement automatic groupshared cache generation the performance gap might go to 0, or become better, tho I suspect probably not without some really advanced heuristics.
 
-TODO: plots
-
 ## N-body simulation
 
 One of the simplest simulations you can do - is an N-body gravity simulation, which only takes a few dozen lines both in TensorFrost, JAX or PyTorch, making this a nice benchmark.
@@ -1002,6 +1001,10 @@ One of the simplest simulations you can do - is an N-body gravity simulation, wh
 
 After I implemented module support with the optimizers, first thing I implemented is a convolutional neural net for the Fashion MNIST classification problem.
 This is a more classic ML problem and you would probably expect for PyTorch or JAX to just straight up win every time. Turns out, actually no, for small network sizes, TensorFrost can actually have a significant win, but I do suspect it might be related simply to either having way less overhead or not loading the traning batch through the CPU, which can kill perf a lot.
+
+## What about some more advanced models?
+
+While I could have tested those, I can pretty much guarantee that for anything that has its bottleneck in matrix multiplications I will very likely lose, at least [without implementing automation of more advanced optimizations](https://siboehm.com/articles/22/CUDA-MMM)
 
 # Future improvements
 
