@@ -1287,7 +1287,11 @@ The window handling functionality and ImGUI related python bindings are still ve
 
 First of all, given that it took me 14th month just to get to this point, the conclusion is simple: unless you have a year of free time - don't make a new machine learning library from scratch.
 
-Jokes aside, it is actually a really interesting learning experience. In fact, given the performance tests from above, if you properly improved the performance of the algorithmic primitives I use, like reductions and matmuls, and added more backends like CUDA, this library or a new version of it might become a viable choice for actual ML applications. However in the current state, it mostly takes a niche right in the middle between "low-level GPU" stuff and "high level ML".
+Jokes aside, it is actually a really interesting learning experience. In fact, given the performance tests from above, if you properly improved the performance of the algorithmic primitives I use, like reductions and matmuls, and added more backends like CUDA, this library or a new version of it might become a viable choice for actual ML applications.
+
+<center><img src="{{ site.baseurl }}/images/high_low.png" height="250px"></center>
+
+However in the current state, it mostly takes a niche right in the middle between "low-level GPU" stuff and "high level ML".
 
 If anyone wants to help me with development, PR's are welcome! There is still like a million things missing, a million bugs waiting to be found, and by myself it would take a few more years for it to get into a more mature state.
 
