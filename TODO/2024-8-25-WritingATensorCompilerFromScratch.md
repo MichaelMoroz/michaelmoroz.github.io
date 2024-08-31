@@ -969,7 +969,7 @@ This is also not perfect, ideally I would also provide an example implementation
 The generated code right now looks something like this, for the [bitonic sort example](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Algorithms/bitonic.ipynb).
 
 <details>
-<summary>CPU host part</summary>
+<summary>C++ host part</summary>
 
 <div markdown="1">
 
@@ -1002,8 +1002,10 @@ std::tuple<TFTensor> BitonicSort(TFContext tf, TFTensor input0)
 <summary>And generated GLSL shaders</summary>
 
 <div markdown="1">
+
 ```glsl
 //Kernel 1
+
 layout (local_size_x = 2, local_size_y = 16, local_size_z = 1) in;
 
 void main() {
@@ -1070,7 +1072,9 @@ void main() {
 </div>
 </details>
 
-I tried to keep the generated code as readable as possible, to some degree it worked, but there are still quite a few ugly parts. For this specific example its still quite nice, as we dont have a lot of algorithmic operations or automatically generated autodiff slop. 
+I tried to keep the generated code as readable as possible, to some degree it worked, but there are still quite a few ugly parts. I keep all buffers in `uint` format, as otherwise you can do `compareexchange` atomics on float elements (at least I think you can't), so because of this there are a lot of `asuint` and `asfloat`/`asint` all over the place in an average generated kernel.
+
+For this specific example its still quite nice, as we dont have a lot of algorithmic operations or automatically generated autodiff slop. 
 
 ## Runtimes
 
