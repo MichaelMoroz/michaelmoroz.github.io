@@ -728,6 +728,8 @@ with tf.kernel([M, N, K]) as (i,j,k):
   #stuff
 ```
 
+You can also use `tf.break_loop()` to stop the first parent loop. There might be some cases when it doesn't work, like stopping a CPU loop from within a kernel (what does that even mean?). But usually it works if you don't do something especially unusual.
+
 ## Host code
 
 Before anything, you should initialize the backend which will be used, like this:
@@ -896,7 +898,7 @@ optimizer.set_clipping_type(tf.clipping.norm)
 
 ## Visualization and interactivity
 
-I really wanted a way to output computation results in real time so I decided to add a GLFW + ImGui for a window and simple GUI to the library. (Taichi also did this!) The way it works now is that you can create a window, create the main rendering loop, and then render the tensor as an image. You can do quite a lot of things with this. I've implemented a 3D fractal path tracer, a 2D fluid simulation, real time neural embedding texture visualization, a compute sphere rasterizer for N-body etc.
+I really wanted a way to output computation results in real time so I decided to add a GLFW + ImGui for a window and simple GUI to the library. (Taichi also did this!) The way it works now is that you can create a window, create the main rendering loop, and then render the tensor as an image. You can do quite a lot of things with this.
 
 ```python
 #creates a single global window (can only be one at the moment)
@@ -927,8 +929,12 @@ while not tf.window.should_close(): #window will close if you press the close bu
     #you could also just provide a numpy array as tf.tensor(), this is usually slower tho, as it requires a GPU upload
 
     #display the image (will be stretched to the window size with nearest neighbor interpolation)
-    tf.render_frame(img)
+    tf.window.render_frame(img)
 ```
+
+In this example you have a window rendering loop, inside of the loop you can query the mouse position and the window size. You can also check if a mouse/keyboard button is pressed. You can create simple ImGUI windows, with text, sliders, checkboxes, buttons and plotlines (in the future I want to integrate [ImPlot](https://github.com/epezent/implot) too)
+
+Then to render the frame you pass a tensor to `tf.window.render_frame()`.
 
 # Backends 
 
@@ -960,6 +966,112 @@ for i, kernel in enumerate(all_kernels):
 
 This is also not perfect, ideally I would also provide an example implementation of a runtime, but right now it needs to be written by the user. Also in the future I'd want to compile the `TensorPrograms` into an archive, that would optionally contain code and compiled binaries, that can be loaded into python immediately. This could be quite useful for debugging code generation in the future.
 
+The generated code right now looks something like this, for the [bitonic sort example](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Algorithms/bitonic.ipynb).
+
+<details>
+<summary>CPU host part</summary>
+
+<div markdown="1">
+
+```cpp
+std::tuple<TFTensor> BitonicSort(TFContext tf, TFTensor input0)
+{
+  tf.region_begin("BitonicSort");
+  int N = input0.shape[0];
+  tf.check_tensor(input0, "input0", {(uint)N, (uint)2}, TFType::Int);
+  TFTensor output0 = tf.allocate("output0", {(uint)N, (uint)2}, TFType::Int);
+  tf.dispatch(0, {output0},  {input0}, {asuint(N)}, {(uint)N, (uint)2}, {2, 16});
+  float log2N = ceil(log2(((float)(N))));
+  int Nround = ((int)(exp2(log2N)));
+  int v4_4 = Nround / 2;
+  float log2N_2 = ceil(log2(((float)(N))));
+  int steps = ((int)((log2N_2 * (log2N_2 + 1.0f)) / 2.0f));
+  for (int step = 0; step < steps; step += 1)
+  {
+    tf.dispatch(1, {output0},  {}, {asuint(N), asuint(step)}, {(uint)v4_4}, {256});
+  }
+  tf.region_end("BitonicSort");
+  return {output0};
+}
+```
+
+</div>
+</details>
+
+<details>
+<summary>And generated GLSL shaders</summary>
+
+<div markdown="1">
+```glsl
+//Kernel 1
+layout (local_size_x = 2, local_size_y = 16, local_size_z = 1) in;
+
+void main() {
+  int block_id = int(gl_WorkGroupID.x);
+  int block_thread_id0 = int(gl_LocalInvocationID.x);
+  int block_thread_id1 = int(gl_LocalInvocationID.y);
+  int block_thread_id2 = int(gl_LocalInvocationID.z);
+
+  int blocks_shape_0 = ((2 + 2) - 1) / 2;
+  int vdiv = block_id / blocks_shape_0;
+  int index_0 = ((block_id - (vdiv * blocks_shape_0)) * 2) + block_thread_id0;
+  int index_1 = (vdiv * 16) + block_thread_id1;
+  bool is_inside_dispatch = (index_0 < 2) && (index_1 < var.N);
+  if (is_inside_dispatch)
+  {
+    int input0 = asint(input0_mem[(index_1 * 2) + index_0]);
+    int output0 = input0;
+    output0_mem[(index_1 * 2) + index_0] = asuint(output0);
+  }
+}
+```
+
+```glsl
+//Kernel 2
+
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+void main() {
+  int block_id = int(gl_WorkGroupID.x);
+  int block_thread_id0 = int(gl_LocalInvocationID.x);
+  int block_thread_id1 = int(gl_LocalInvocationID.y);
+  int block_thread_id2 = int(gl_LocalInvocationID.z);
+
+  float log2N = ceil(log2(float(var.N)));
+  int Nround = int(exp2(log2N));
+  int index_0 = (block_id * 256) + block_thread_id0;
+  bool is_inside_dispatch = index_0 < (Nround / 2);
+  if (is_inside_dispatch)
+  {
+    float j = floor(sqrt(float(2 * var.step) + 1.0f) - 0.5f);
+    float n = round(float(var.step) - ((0.5f * j) * (j + 1.0f)));
+    int B = int(round(exp2(j - n)));
+    int mask = (n < 0.5f) ? ((2 * B) - 1) : B;
+    int e1 = (index_0 % B) + ((2 * B) * (index_0 / B));
+    int e2 = e1 ^ mask;
+    if ((e1 < var.N) && (e2 < var.N))
+    {
+      int key1 = asint(output0_mem[(clamp(e1, 0, var.N - 1) * 2) + clamp(0, 0, 2 - 1)]);
+      int key2 = asint(output0_mem[(clamp(e2, 0, var.N - 1) * 2) + clamp(0, 0, 2 - 1)]);
+      int val1 = asint(output0_mem[(clamp(e1, 0, var.N - 1) * 2) + clamp(1, 0, 2 - 1)]);
+      int val2 = asint(output0_mem[(clamp(e2, 0, var.N - 1) * 2) + clamp(1, 0, 2 - 1)]);
+      if (key1 > key2)
+      {
+        output0_mem[(clamp(e1, 0, var.N - 1) * 2) + clamp(0, 0, 2 - 1)] = asuint(key2);
+        output0_mem[(clamp(e2, 0, var.N - 1) * 2) + clamp(0, 0, 2 - 1)] = asuint(key1);
+        output0_mem[(clamp(e1, 0, var.N - 1) * 2) + clamp(1, 0, 2 - 1)] = asuint(val2);
+        output0_mem[(clamp(e2, 0, var.N - 1) * 2) + clamp(1, 0, 2 - 1)] = asuint(val1);
+      }
+    }
+  }
+}
+```
+
+</div>
+</details>
+
+I tried to keep the generated code as readable as possible, to some degree it worked, but there are still quite a few ugly parts. For this specific example its still quite nice, as we dont have a lot of algorithmic operations or automatically generated autodiff slop. 
+
 ## Runtimes
 
 Right now there are only 2 runtime backends - C++/OpenMP and C++/OpenGL. After the compiler generates the C++ code for the shaders and the host, its compiled by the C++ compiler, and also by the OpenGL shader compiler (which is built in the driver and can have horrible bugs, by the way).
@@ -976,7 +1088,7 @@ I plan on also adding CUDA and Vulkan in the future, for the first one I could j
 
 Before all the algorithmic stuff, I initially played around with simulations that map nicely to multidimensional arrays, waves and Eulerian fluids. For the most interesting example, I implemented a 2D fluid solver with a multigrid pressure solver, RK4 bicubic advection, and vorticity confinement. As this example didn't require any control flow, but only indexing and basic kernel fusion, it was a nice first test for the compiler. 
 
-Also nevermind the boundary artifacts or the interpolation issues with the density, its fixable, but I didn't have enough time to mess around with it. I will probably implement a 3D fluid simulation next time anyway.
+Also nevermind the boundary artifacts or the interpolation issues with the density, its fixable, but I didn't have enough time to mess around with it. I will probably implement a proper 3D fluid simulation next time anyway.
 
 ## Fractal path tracer
 
@@ -988,9 +1100,9 @@ In this particular case I created my own vec3 class in python here, as without a
 
 Syntactically speaking, this is 1-to-1 the same how I would write a path tracer in a shader, with the exception of there not being any explicit kernel definitions here. I also reused the bicubic interpolation from the fluid example for the camera reprojection, same with the bilinear sampler for the HDRI sky here.
 
-One amazing thing here, is that the normals here are computed through backpropagation and not finite differences! It even improved the performance, as FD normals take 4x SDF calculations using the tetrahedron trick, while backwards mode autodiff only takes on the order of 2x. It does only work for unrolled SDF's like kaleidoscopic iterative fractals (KIF's), SDF's that require varying loop iterations like Mandelbulb will not be differentiable at the moment.
+One amazing thing here, is that the normals are computed through backpropagation and not finite differences! It even improved the performance, as FD normals take 4x SDF calculations using the tetrahedron trick, while backwards mode autodiff only takes on the order of 2x. It does only work for unrolled SDF's like kaleidoscopic iterative fractals (KIF's), SDF's that require varying loop iterations like Mandelbulb will not be differentiable at the moment.
 
-What about bounding volume hierarchies (BVH) for triangle meshes here? Right now you can't really use them, as the IR does not have a way to declare local arrays, and those will be required for the stack when traversing the BVH tree efficiently (you could actually emulate those with a giant number of local variables and `if`'s, but why). I suspect I might add those together with groupshared memory, as they will have similar syntax.
+What about bounding volume hierarchies (BVH) for triangle meshes? Right now you can't really use them, as the IR does not have a way to declare local arrays, and those will be required for the stack when traversing the BVH tree efficiently (you could actually emulate those with a giant number of local variables and `if`'s, but why). I suspect I might add those together with groupshared memory, as they will have similar syntax.
 
 At this point, now that I've also implemented modules and optimizers, I could also theoretically implement a [neural radiance cache](https://research.nvidia.com/publication/2021-06_real-time-neural-radiance-caching-path-tracing) here, as I can both train the network and trace the rays. But personally I'd probably prefer a sparse hash grid radiance cache, as its a bit more deterministic. 
 
@@ -1002,9 +1114,9 @@ At this point, now that I've also implemented modules and optimizers, I could al
 
 <center><iframe width="560" height="315" src="https://www.youtube.com/embed/7uzuGftSYKk?si=xt17EQguu4pg_PlV" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
 
-[This is very similar to the examples I have done in shadertoy.](https://www.shadertoy.com/view/dd33zf) It's a small texture, usually 32*32, with an embedding in each pixel. Those embeddings are interpolated at some point, concatenated and passed to a small neural network that magically transforms that into a higher resolution image. The interpolation here is also the one from [iq's article "improved texture interpolation"](https://iquilezles.org/articles/texture/), while that interpolation is "fake" and has 0 gradients at the pixel edges, if you gave the neural net a set of those, but offset by half a pixel, it can actually recreate a proper C2 continuous image without you needing bicubic interpolation! (I didn't came up with this, all credits to [Instant-NGP, Appendix A](https://nvlabs.github.io/instant-ngp/assets/mueller2022instant.pdf)) Surprisingly, my tests show that bicubic is actually somehow worse at representing images here, than this fake smooth interpolaiton. I suspect the neural net has an easier time at "distorting" bilinearly interpolated values, rather than cubically interpolated ones, as fewer voxels are influenced.
+[This is very similar to the examples I have done in shadertoy.](https://www.shadertoy.com/view/dd33zf) It's a small texture, usually 32*32, with an embedding in each pixel. Those embeddings are interpolated at some point, concatenated and passed to a small neural network that magically transforms that into a higher resolution image. The interpolation here is also the one from [iq's article "improved texture interpolation"](https://iquilezles.org/articles/texture/), while that interpolation is "fake" and has 0 gradients at the pixel edges, if you gave the neural net a set of those, but offset by half a pixel, it can actually recreate a proper C2 continuous image without you needing bicubic interpolation! (I didn't came up with this, all credits to [Instant-NGP, Appendix A](https://nvlabs.github.io/instant-ngp/assets/mueller2022instant.pdf)) Surprisingly, my tests show that bicubic is actually somehow worse at representing images here, than this fake smooth interpolaiton. I suspect the neural net has an easier time at "distorting" bilinearly interpolated values, rather than cubically interpolated ones, as fewer pixels are influenced.
 
-I used my Adam optimizer module to optimize the embedding image and the neural net, given a set of random samples from the original image. Of the interesting things, the gradients of the trilinear interpolation are just atomic adds to a tensor of the same shape as the embedding.
+I used my Adam optimizer module to optimize the embedding image and the neural net, given a set of random samples from the original image. Of the interesting things, the gradients of the trilinear interpolation are just atomic adds to a tensor of the same shape as the embedding. It is probably as good as you can do it here anyway, given that the interpolation is at random unordered positions.
 
 ## N-body SPH with a custom sphere rasterizer
 
@@ -1030,6 +1142,7 @@ rho = tf.sum(sph_kernel(dist, sph_rad), axis=1)
 And the second part computes the forces, first computes the soft gravity potential, then its negative gradient for the gravitational force. After that it computes the friction (viscosity) and the SPH pressure force, which is the gradient of the SPH kernel times the pressure. There is also the spike force, which is keeping the particles from overlapping to have a nice uniform distribution.
 
 ```py
+
 
 def pressure(rho):
     return (rho - rest_density)
@@ -1061,11 +1174,66 @@ Of course, something like Taichi would actually win here against everyone, but i
 
 ## N-body simulation
 
-One of the simplest simulations you can do - is an N-body gravity simulation, which only takes a few dozen lines both in TensorFrost, JAX or PyTorch, making this a nice benchmark.
+[---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/n-body-benchmark.py)
+
+One of the simplest simulations you can do - is a N-body gravity simulation, which only takes a dozen lines both in TensorFrost, JAX or PyTorch, making this a nice benchmark.
+
+```py
+dx = tf.unsqueeze(X, axis=1) - tf.unsqueeze(X, axis=0)
+
+d2 = tf.unsqueeze(tf.sum(dx**2.0, axis=-1), axis=-1) + 1e-4
+dist = tf.sqrt(d2)
+Fg = -dx * 1.0 / (d2 * dist)
+
+Fi = tf.sum(Fg, axis=1)
+
+Vnew = V + Fi * 0.001
+Xnew = X + Vnew * 0.001
+```
+
+This is basically all there is to it, but if you don't do kernel fusion, you will perform hillariously bad here, as lots of N^2 buffers will be allocated and waste a lot of bandwidth, but just for a demonstration, here is how default eager mode evaluation PyTorch scales compared to TensorFrost:
+
+<center><img src="{{ site.baseurl }}/images/n-body-bench-torch-default.png" height="400px"></center>
+
+It is *very* bad, but this is quite expected, we aren't fusing any kernels here. Let's now compare it to compiled PyTorch, and to compiled JAX. (All tests done on Ubuntu/RTX 2060/CUDA)
 
 <center><img src="{{ site.baseurl }}/images/n-body-bench.png" height="400px"></center>
 
+The results here are quite surprising, first of all, the compiled version of the function both in Torch and JAX are very close to what TensorFrost achieves here, which I actually didn't expect, in some cases they even win, like ~1000 particles.  But they still scale slightly worse than the TensorFrost version of the same code curiously. Do they employ some staged reduction here? 
+TensorFrost doesn't actually fuse these operations 100% optimally here, the final generated kernel does 1 thread per each resulting component of the force. Ideally you'd do a single loop for all components, as they easily fit in the registers, and you remove a lot of wasted computations. This is the `explicit loop` version of the same calculations. The code looks like this:
+
+```py
+Fi = tf.buffer([N, 3], tf.float32)
+
+i, = tf.indices([N])
+Fix, Fiy, Fiz = tf.const(0.0), tf.const(0.0), tf.const(0.0)
+x0, y0, z0 = X[i, 0], X[i, 1], X[i, 2]
+with tf.loop(N) as j:
+    x, y, z = X[j, 0], X[j, 1], X[j, 2]
+    dx, dy, dz = x - x0, y - y0, z - z0
+    d2 = dx*dx + dy*dy + dz*dz
+    dist = tf.sqrt(d2 + 1e-4)
+    Fg = -dx / (d2 + 1e-4) * 1.0 / dist
+    Fix.val += Fg * dx
+    Fiy.val += Fg * dy
+    Fiz.val += Fg * dz
+    
+Fi[i, 0] = Fix
+Fi[i, 1] = Fiy
+Fi[i, 2] = Fiz
+
+Vnew = V + Fi * 0.001
+Xnew = X + Vnew * 0.001
+```
+
+And unsurprisingly it absolutely demolishes every other contestant by a factor 2-3x at the cost of uglier code.
+
+However, this is still nowhere near what a hand-tuned shader version of this would do. As you can actually do block reductions here. Preload a range of particles into groupshared, then do the force computation for this block, and repeat for the next blocks. You can actually do even better, if you preload something like 4-8 particles into registers, and compute their forces from there, leading to a staged block algorithm. This is how you usually try to optimize reductions that reuse a lot of memory, like [matrix multiplications](https://siboehm.com/articles/22/CUDA-MMM). 
+
 ## MNIST with a convolutional network
+
+[--Link to TensorFrost example---]()
+[--Link to equivalent PyTorch example--]()
 
 After I implemented module support with the optimizers, first thing I implemented is a convolutional neural net for the Fashion MNIST classification problem.
 This is a more classic ML problem and you would probably expect for PyTorch or JAX to just straight up win every time. Turns out, actually no, for small network sizes, TensorFrost can actually have a significant win, but I do suspect it might be related simply to either having way less overhead or not loading the traning batch through the CPU, which can kill perf a lot.
@@ -1076,13 +1244,15 @@ While I could have also tested something like LLM's or diffusion models, I can p
 
 # Future improvements
 
-One of the things that quite often happens with writing vectorized code for simple particle simulations is that all the vector variables are 3d, and can easily be stored in registers, but the current compiler will generate it as a [..., a, b, 3] shaped kernel with a lot of duplicated arithmetic (unless you create your own vec class that operates only on scalars), like in [the n-body simulation example](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/n-body.ipynb). This is something that could be optimized in the future, by generating the initial kernel with a smaller shape, like [..., a, b, 1] and then unrolling the dimensions that are broadcast compared to the kernel's shape.
+One of the things that quite often happens with writing vectorized code for simple particle simulations, like the simple N-body example from above, is that all the vector variables are 3d, and can easily be stored in registers, but the current compiler will generate it as a [..., a, b, 3] shaped kernel with a lot of duplicated arithmetic (unless you create your own vec class that operates only on scalars). This is something that could be optimized in the future, by generating the initial kernel with a smaller shape, like [..., a, b, 1] and then unrolling the dimensions that are broadcast compared to the kernel's shape. 
 
-At the moment the IR does not have a representation for groupshared memory, which is a big bottleneck for large matrix multiplications, and can be quite useful for some other algorithms, like FFT/sort/convolutions.
+Even more advanced optimizations can be performed from that starting point, like automatic caching of data into groupshared memory. Such a caching would require automatic read/write range analysis, for that I will need to implement a VM that executes the operations and computes the range of values they can have with interval arithmetic (perhaps more complex analysis too).
 
-Kernels can be additionally fused at the workgroup level as a post kernel fusion pass, which is quite complicated, and requires additional groupshared memory with group syncs, but for small neural networks it could be a massive speedup.
+At the moment the IR does not have a representation for groupshared memory, which is a big bottleneck for large matrix multiplications, and can be quite useful for optimizing some other algorithms, like [FFT](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Rendering/fft2d.ipynb)/[sort](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Algorithms/sorting_tests.py)/[convolutions](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Rendering/convolution.py).
 
-Another thing that is perhaps very high in the priority list right now is to implement repeating computation eliminator, its quite troublesome to implement due to requiring some way to compare entire computation chains (by making a specific computation result node have a unique number), but would remove quite a lot of redundant cruft from the generated kernels.
+Kernels can be additionally fused at the workgroup level as a post kernel fusion pass, which is quite complicated, and requires additional groupshared memory with group syncs, and a correct estimation of the group size, but for small neural networks it could be a massive speedup.
+
+Another thing that is perhaps very high in the priority list right now is to implement repeating computation eliminator, its quite troublesome due to requiring some way to compare entire computation chains (by making a specific computation result node have a unique number), but would remove quite a lot of redundant cruft from the generated kernels.
 
 One nice thing, that I would like to borrow from JAX is `vmap`. Writing particle simulations in vectorized form often annoyingly require a lot of `squeeze` and `unsqueeze` operations, which could be automated if you vectorized a single particle calculation into a target shape. In fact, I could also make the explicit `kernel` node usage assume that all its children are scalar (if not - unroll), and it would also behave similarly to `vmap` with the exception of it forcibly creating a single kernel no matter what. Implementing `vmap` is, I supect, not to difficult, as it only requires padding all the shapes of the child operation with the given shape (with some peculiarities). Syntactically it could look like
 
@@ -1095,6 +1265,8 @@ With i,j,k being scalar at trace time, then padded with given shape.
 I suspect LLVM could still be put at the end of my compilation stages as an intermediate between final code generation, to do some final optimizations.
 
 Also, this really needs a documention page, and I definitely need to create one sooner rather than later.
+
+The window handling functionality and ImGUI related python bindings are still very few, and ideally I'd want to pass all their functionality to Python, I'd really want a helping hand here, as these libraries are pretty gigantic.
 
 # Conclusion
 
