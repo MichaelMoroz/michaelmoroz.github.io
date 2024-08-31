@@ -1253,7 +1253,7 @@ Honestly speaking, I'm not sure If the win that TensorFrost has at small sizes i
 
 As a bonus I captured the 16-128-512 pass in Nvidia Nsight, with debug regions
 
-<center><img src="{{ site.baseurl }}/images/nsight_mnist.png" height="400px"></center>
+<center><img src="{{ site.baseurl }}/images/nsight_mnist.png" height="200px"></center>
 
 *PS. It's pretty annoying to benchmark these, as I usually work on Windows (arguably better for graphics dev), rather than on Linux, and the compiled GPU versions of JAX/PyTorch are only available on Linux. TensorFrost works on both platforms, and it is actually easier to port from Windows to Linux than the other way around*
 
