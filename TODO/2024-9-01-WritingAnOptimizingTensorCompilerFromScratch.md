@@ -1,12 +1,13 @@
 ---
 layout: post
-title: Writing a tensor compiler from scratch 
+title: Writing an optimizing tensor compiler from scratch 
 image: TensorFrost.png
 ---
 
 In this blog post I want to talk about the research and development results for a library that I started working on more than a year ago - [TensorFrost](https://github.com/MichaelMoroz/TensorFrost). Under the hood it's a static optimizing tensor compiler with a focus on being able to do more "shader-like" things while still keeping the ability to do high level linear algebra for ML in numpy-like syntax with automatic differentiation support.
 
 If you want to see actual real use code examples, jump to [So what can we do with this?](#so-what-can-we-do-with-this). If you want to see performance comparison against ML libraries go to [What's the current performance compared to other tensor libraries?](#whats-the-current-performance-compared-to-other-tensor-libraries)
+For documentation on basic functionality, read the [README](https://github.com/MichaelMoroz/TensorFrost/blob/main/README.md) file in the repo.
 
 I started working on it 14 months ago when I hit a wall when I was working on neural variational monte carlo in Unity (I might make a separate blog post on this). After some time it became obvious that Machine Learning, let alone of this kind, is simply a no go without the required tools. Before realizing that, to make it even remotely work I needed to cut a lot of corners. Instead of using backpropagation I used evolution strategies, the neural network was hardcoded into a single kernel (including the determinant which was computed in a single thread in the same kernel!), and the reduction operations were very primitive "loop over all elements per thread", which don't map that well to GPU's. Finding the median of an array was also annoying, as I didn't bother with making a sorting algorithm, so I just found the "approximate" median. This is not an exhaustive list of issues, it was simply that limiting to do quite literally anything there.
 
@@ -673,7 +674,7 @@ kernel(cost=0.000000, shape=[v1_0,N], )
 
 As you can see, it not only fused the `pow` at the end of the matrix multiplication, but also fused the transposition with the sin/cos operations into the summation loop. While this impressively created only a single kernel, this isn't actually super optimal. Matrix multiplcation is often bottlenecked by arithmetic, not just by memory access. And we effectively instead of doing sin/cos N^2 times, do them N^3 times now! This is something that I still need to fine tune in the fusion heuristics algorithm. In the future though, if you could use groupshared caches - it would be fine enough to do the fusion of these input computations at the matrix "block" load stage, this should be enough to significantly reduce the overhead of doing additional sin/cos, as now we do them only for each "block" of the matrix, not for each product. But I would suspect that for huge matrices, these precomputations will still be a bottleneck, and need to be forcibly unfused. So yes, fewer kernels doesn't actually mean better sometimes.
 
-Also unfotrunately the current compiler version prefers to fuse layer activations into the matmul loop instead of keeping them at the end of the previous layer matmul, this once again needs to be fine tuned with better heuristics.
+In the current compiler version I have disabled matmul load fusion completely until I write a better heuristic, as it usually improves performance.
 
 # Python frontend
 
@@ -892,7 +893,7 @@ loss = res[-1].numpy[0]
 I've also recently added regularizers (reg_type = tf.regularizers.l2 or tf.regularizers.l1) and clipping (tf.clipping.norm or just tf.clipping.clip for a clamp), which can be added like:
 
 ```py
-optimizer = tf.optimizers.adam(wavefunction, beta1 = 0.0, beta2 = 0.999, reg_type = tf.regularizers.l2, reg = 0.02, clip = 0.01)
+optimizer = tf.optimizers.adam(model_container, beta1 = 0.0, beta2 = 0.999, reg_type = tf.regularizers.l2, reg = 0.02, clip = 0.01)
 optimizer.set_clipping_type(tf.clipping.norm)
 ```
 
@@ -1230,7 +1231,7 @@ Xnew = X + Vnew * 0.001
 
 And unsurprisingly it absolutely demolishes every other contestant by a factor 2-3x at the cost of uglier code.
 
-However, this is still nowhere near what a hand-tuned shader version of this would do. As you can actually do block reductions here. Preload a range of particles into groupshared, then do the force computation for this block, and repeat for the next blocks. You can actually do even better, if you preload something like 4-8 particles into registers, and compute their forces from there, leading to a staged block algorithm. This is how you usually try to optimize reductions that reuse a lot of memory, like [matrix multiplications](https://siboehm.com/articles/22/CUDA-MMM). 
+However, this is still nowhere near what a hand-tuned shader version of this would do. As you can actually do block reductions here. Preload a range of particles into groupshared, then do the force computation for this block, and repeat for the next blocks. You can do even better, if you preload something like 4-8 particles into registers, and compute their forces from there, leading to a staged block algorithm. This is how you usually try to optimize reductions that reuse a lot of memory, like [matrix multiplications](https://siboehm.com/articles/22/CUDA-MMM). 
 
 Of course, something like Taichi would actually win here against everyone, but its not our comparison target as you can't write the simulation in vectorized tensor form there, and likely after I implement automatic groupshared cache generation the performance gap might go to 0, or become better, tho I suspect probably not without some really advanced heuristics.
 
@@ -1251,7 +1252,7 @@ For really tiny networks there is a large win, and the performance drops linearl
 
 Honestly speaking, I'm not sure If the win that TensorFrost has at small sizes is due to just having less overhead, or due to better kernels at small size. It might also be that the training step in PyTorch has huge overhead for the minibatch creation. In TensorFrost I have the entire dataset on GPU and use it directly without intermediate steps.
 
-As a bonus I captured the 16-128-512 pass in Nvidia Nsight, with debug regions
+As a bonus I captured the TensorFrost 16-128-512 pass in Nvidia Nsight, with debug regions (ran on RTX 3090)
 
 <center><img src="{{ site.baseurl }}/images/nsight_mnist.png" height="200px"></center>
 
@@ -1283,7 +1284,7 @@ With i,j,k being scalar at trace time, then padded with given shape.
 
 I suspect LLVM could still be put at the end of my compilation stages as an intermediate between final code generation, to do some final optimizations.
 
-Also, this really needs a documention page, and I definitely need to create one sooner rather than later.
+Right now the only documentation is provided in the [README.md](https://github.com/MichaelMoroz/TensorFrost/blob/main/README.md) file in the repository, in the future I should made a separate documentation page for this.
 
 The window handling functionality and ImGUI related python bindings are still very few, and ideally I'd want to pass all their functionality to Python, I'd really want a helping hand here, as these libraries are pretty gigantic.
 
