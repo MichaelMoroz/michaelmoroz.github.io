@@ -217,6 +217,8 @@ In the world of real-time graphics, you can render those points at 60fps, and yo
 
 Though, while I am stating these things, most large ML models are simply not visualizable in real time, and the ones that are, are usually not easy to usefully interpret. Visualizations are usually most applicable to the intersection of ML/Physics/Graphics, like NERFs, diffusion, neural implicit representations, etc. But I still think that even changing hyperparameters in real time and seeing its result on the training loss can also be somewhat interesting, though you do need the model to be rather performant for that.
 
+*PS. Taichi does have a way to output a window, pull events, render things from GPU buffers, etc*
+
 ***5. Some simulation and graphics applications can benefit from a more high level description***
 
 On the other side, in the world of real-time simulations and graphics, I've written custom kernels for every specific algorithm something needed: radix sorts, multigrid Poisson equation solver, numerical integrators, etc. So when I'm prototyping or having a new idea how to optimize the algorithm globally, it can get annoying to make global changes in the code structure, since they usually require a partial rewrite, creating new kernels and so on, and I don't really see why this couldn't be automated from higher-level operations.
