@@ -157,7 +157,7 @@ Most of the Tensor compiler research that I've seen focuses on ML bottlenecks, l
 
 ***2. Dynamic control flow is very hard to represent in classic ML libraries***
    
-The performance is actually not the only issue, control flow can be very prevalent, but is quite annoying to express in these libraries, if even possible, as native loops in JAX for example, require doing absolutely cursed stuff like this: 
+The performance is actually not the only issue when writing simulations or graphics, control flow can be very prevalent, but unfortunately it's quite inconvenient to express in these libraries, if even possible, as native loops in JAX for example, require doing stuff like: 
 
 ```py
 def factorial(n):
@@ -174,6 +174,7 @@ def factorial(n):
     return final_state[1]
 ```
 
+Which looks completely cursed. Now imagine multiple stacked loops - yikes
 
 Such native loops are required if you want a varying iteration count for some operation, in simulations this could be, for example, summing a force from a varying number of particle neighbors. Even something like Gaussian Splatting requires a variable loop per tile. From a purely ML standpoint, this isn't really a problem, since such cases practically never happen, and on top of that, gradients of such loops might potentially have atrocious performance (or might just be uncomputable if the loop can be theoretically infinite, as the compiler might not know). 
 
