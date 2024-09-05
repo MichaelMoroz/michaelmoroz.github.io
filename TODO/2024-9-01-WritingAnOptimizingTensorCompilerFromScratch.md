@@ -217,7 +217,7 @@ In the world of real-time graphics, you can render those points at 60fps, and yo
 
 Though, while I am stating these things, most large ML models are simply not visualizable in real time, and the ones that are, are usually not easy to usefully interpret. Visualizations are usually most applicable to the intersection of ML/Physics/Graphics, like NERFs, diffusion, neural implicit representations, etc. But I still think that even changing hyperparameters in real time and seeing its result on the training loss can also be somewhat interesting, though you do need the model to be rather performant for that.
 
-*PS. Taichi does have a way to output a window, pull events, render things from GPU buffers, etc*
+*PS. Taichi actually does have a way to output a window, pull events, render things from GPU buffers, etc*
 
 ***5. Some simulation and graphics applications can benefit from a more high level description***
 
@@ -276,7 +276,9 @@ In multi-level linked lists kernel fusion becomes slightly more tricky, but effe
 
 <center><img src="{{ site.baseurl }}/images/multilevel.png" height="300px"></center>
 
-The kernels are also represented in the same IR, as children of a "kernel" node. At the code generation stage, everything outside of the kernel nodes is converted into host code (right now C++), and the kernels are converted into device code (OpenMP C++ or GLSL/HLSL). This way the entire program is represented in a single IR, and the compiler can optimize it globally both for CPU and GPU parts.
+Having children or parents for a tensor is a rather unusual notion, but it is totally fine as long as you make sure that the shape of this node is broadcastable to all of its parents. So you can, for example, have a scalar loop with children of any shape. Or, lets look at a more complex example, a loop of shape [N, 1], with a child loop of shape [] with a child load operation of shape [M]. Totally different shapes, but they are all broadcastable between each other so the shape a generated kernel here will be [N, M] for all these nodes. There are also cases when you have broadcastable shape between parents and children and incompatible shape between neighbors - those are simply incorrect and should lead to a compilation error, as there is no way to generate a kernel here (without complex masking). Example would be a loop of shape [N] with 2 children of shape [5, N] and [2, N].
+
+The kernels are also represented in the same IR, as children of a "kernel" node. At the code generation stage, everything outside of the kernel nodes is converted into host code (right now C++), and the kernels are converted into device code (OpenMP C++ or GLSL/HLSL). This way the entire program is represented in a single IR, and the compiler can optimize it globally both for CPU and GPU parts. 
 
 Since the IR is the same for all compilation stages, you could for example input both high level tensor operations together with explicitly specified kernels, and it can already be done like this:
 

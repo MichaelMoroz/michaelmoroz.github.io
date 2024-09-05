@@ -2,6 +2,7 @@
     "cSpell.words": [
         "autodiff",
         "backpropagation",
+        "broadcastable",
         "Eulerian",
         "groupshared",
         "megakernel",
