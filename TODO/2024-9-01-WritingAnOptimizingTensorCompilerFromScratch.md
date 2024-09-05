@@ -1,6 +1,6 @@
 ---
 layout: post
-title: TensorFrost: Writing an optimizing tensor compiler from scratch 
+title: Writing an optimizing tensor compiler from scratch 
 image: TensorFrost.png
 ---
 
