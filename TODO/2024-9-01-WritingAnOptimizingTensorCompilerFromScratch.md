@@ -23,8 +23,8 @@ Example projects I did in TensorFrost:
 - [So why make a new library?](#so-why-make-a-new-library)
 - [Architecture](#architecture)
   - [Kernel fusion](#kernel-fusion)
-  - [First prototype - DAG](#first-prototype---dag)
-  - [Second prototype - Multilevel linked list](#second-prototype---multilevel-linked-list)
+  - [First prototype](#first-prototype)
+  - [Second prototype](#second-prototype)
     - [Optimization and generation of the kernels](#optimization-and-generation-of-the-kernels)
     - [Algorithmic operations](#algorithmic-operations)
     - [Advanced kernel fusion](#advanced-kernel-fusion)
@@ -247,7 +247,7 @@ But optimizing this specific aspect when dealing with tensors is actually nothin
 
 If you tried to write algorithms, like the ones I write in Shadertoy, you will eventually start to hit the limits these compilers have. The number of operation nodes you could fuse now rises to the order of thousands, not even mentioning the complex control flow, and ideally they should fit into a single kernel, but its highly likely you will end up with a lot of smaller kernels if you apply fusion naively.
 
-## First prototype - DAG
+## First prototype
 
 When I initally started prototyping the operation graph compiler in C# in Unity (not exactly your typical place for a compiler prototype, I know), I kept the graph just as a simple Directed Acyclic Graph (DAG), where each node was a single operation with some tensor shape. When I began testing the kernel clustering even on simple physics or rendering, the clustering algorithm quickly started to get out of hand, as in the example below. 
 
@@ -271,7 +271,7 @@ Adding the problem of exponentially growing number of possible kernel fusions an
 
 I also wanted to have at least some sort of control flow, which wasn't obvious how to add into this specific graph for me, at the time.
 
-## Second prototype - Multilevel linked list
+## Second prototype
 
 > Any sufficiently complicated C or Fortran program contains an ad hoc, informally-specified, bug-ridden, slow implementation of half of Common Lisp.
 
