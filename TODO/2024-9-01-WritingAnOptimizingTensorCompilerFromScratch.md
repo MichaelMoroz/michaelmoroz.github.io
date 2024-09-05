@@ -4,29 +4,17 @@ title: Writing an optimizing tensor compiler from scratch
 image: TensorFrost.png
 ---
 
-In this blog post I want to talk about the research and development results for a library that I started working on more than a year ago - [TensorFrost](https://github.com/MichaelMoroz/TensorFrost). Under the hood it's a static optimizing tensor compiler with a focus on being able to do more "shader-like" things while still keeping the ability to do high level linear algebra for ML in numpy-like syntax with automatic differentiation support.
+In this blog post I want to talk about the research and development results for a library that I started working on more than a year ago - [TensorFrost](https://github.com/MichaelMoroz/TensorFrost). Under the hood it's a static optimizing tensor compiler with a focus on being able to do more "shader-like" things while still keeping the ability to do high level linear algebra for ML in Numpy-like syntax with automatic differentiation support.
 
-If you want to see actual real use code examples, jump to [So what can we do with this?](#so-what-can-we-do-with-this). If you want to see performance comparison against ML libraries go to [What's the current performance compared to other tensor libraries?](#whats-the-current-performance-compared-to-other-tensor-libraries)
-For documentation on basic functionality, read the [README](https://github.com/MichaelMoroz/TensorFrost/blob/main/README.md) file in the repo.
+*If you want to see actual real use code examples, jump to [So what can we do with this?](#so-what-can-we-do-with-this). If you want to see performance comparison against ML libraries go to [What's the current performance compared to other tensor libraries?](#whats-the-current-performance-compared-to-other-tensor-libraries)
+For documentation on basic functionality, read the [README](https://github.com/MichaelMoroz/TensorFrost/blob/main/README.md) file in the repo.*
 
-I started working on it 14 months ago when I hit a wall when I was working on neural variational monte carlo in Unity (I might make a separate blog post on this). After some time it became obvious that Machine Learning, let alone of this kind, is simply a no go without the required tools. Before realizing that, to make it even remotely work I needed to cut a lot of corners. Instead of using backpropagation I used evolution strategies, the neural network was hardcoded into a single kernel (including the determinant which was computed in a single thread in the same kernel!), and the reduction operations were very primitive "loop over all elements per thread", which don't map that well to GPU's. Finding the median of an array was also annoying, as I didn't bother with making a sorting algorithm, so I just found the "approximate" median. This is not an exhaustive list of issues, it was simply that limiting to do quite literally anything there.
-
-While this did perform extremely fast for small systems (like 2-4 electrons and small network), it scaled horribly for anything larger. From some point there is just not enough registers on the GPU's streaming multiprocessor to store the entire neural network state, so ideally you would need a smart and dynamic way to combine neural network operations together in kernels that optimally use groupshared memory, unless you want to performance to drop to nearly zero, or do it manually.
-
-Of course while I realized these problems exist - intially I thought I'd try to go forward with the old approach, and try to implement a somewhat more advanced optimization algorithm and maybe make it work *a bit* better. Since backpropagation would be just that compicated for this model, I couldn't be bothered with writing it by hand in shaders - so I chose a more advanced evolution based algorithm - LM-MA-ES (Limited Memory Matrix Adaptation Evolution Strategies). It already required a lot more kernels to implement the matrix operations, so I decided to make a small tensor library in C# for Unity.
-
-Long story short, I didn't actually get to implement LM-MA-ES, and instead that library turned out to be the complete opposite of **"small"**, and instead transformed something with a lot more tools and features than I originally anticipated (hello scope creeep 👋).
-
-The thing is, this [isn't](https://github.com/MichaelMoroz/TensorCL) the first time I tried to make a tensor library. That one I did in OpenCL a whole 5 years ago, when I was still in the 3rd year of uni. At that point I didn't really know how to do kernel fusion or any other compiler-like optimization techniques so in the end I dropped the project since there wasn't anything particularly useful you could do with it (and I had no clue how to debug issues there). It did have backwards mode autodifferentiation that used a operation tape, but the performance of doing every operation one kernel at a time was just too bad for the stuff I usually do.
-Interestingly enough, the primary reason I started working on it was a bit similar to the one for making this new library, I wanted to implement a neural potential energy surface for modeling molecule dynamics. There was also the other reason, I did not have a Nvidia GPU to use any proper ML library at the time, as I was literally too poor to buy one, so my only option was OpenCL 💀.
-
-This time I knew, if I wanted to make a library like that again, the only way to keep it alive long enough is by first making it useful for pet projects I often make, and only then adding everything else. Projects like graphics, simulations, etc, if you've seen my [Shadertoy page](https://www.shadertoy.com/user/michael0884) - stuff like that. And ideally it should be able to work at similar performance. 
-
-There are a lot of ideas combining graphics, physics and ML that I sometimes have witch are simply too bothersome to implement in pure shaders, so I almost never touched machine learning related stuff apart of some things that are simple enough to port to shaders, like [Neural Implicit Representations](https://www.shadertoy.com/view/DstGDX). So I hoped that this library would make it more reachable for me.
-
-> Disclaimer: I should say that the current state of the library is still far from being production ready, and at this point I would strongly recommend not to use this for any serious projects. It is very likely that there will be breaking updates in the future, as a lot of the code is not finilized. Also given that this is pretty much my first time writing a compiler, there are probably both wrong architectural choices, as well as just simply wrong assumptions.
-
-- [Why make a new library?](#why-make-a-new-library)
+- [What can be done right now](#what-can-be-done-right-now)
+  - [Fluid simulation](#fluid-simulation)
+  - [Fractal path tracer](#fractal-path-tracer)
+  - [Texture embedder with small neural network](#texture-embedder-with-small-neural-network)
+  - [N-body SPH with a custom sphere rasterizer](#n-body-sph-with-a-custom-sphere-rasterizer)
+- [So why make a new library?](#so-why-make-a-new-library)
 - [Architecture](#architecture)
   - [Kernel fusion](#kernel-fusion)
   - [First prototype](#first-prototype)
@@ -45,11 +33,6 @@ There are a lot of ideas combining graphics, physics and ML that I sometimes hav
 - [Backends](#backends)
   - [Codegen](#codegen)
   - [Runtimes](#runtimes)
-- [So what can we do with this?](#so-what-can-we-do-with-this)
-  - [Fluid simulation](#fluid-simulation)
-  - [Fractal path tracer](#fractal-path-tracer)
-  - [Texture embedder with small neural network](#texture-embedder-with-small-neural-network)
-  - [N-body SPH with a custom sphere rasterizer](#n-body-sph-with-a-custom-sphere-rasterizer)
 - [What's the current performance compared to other tensor libraries?](#whats-the-current-performance-compared-to-other-tensor-libraries)
   - [N-body simulation](#n-body-simulation)
   - [MNIST with a convolutional network](#mnist-with-a-convolutional-network)
@@ -57,13 +40,124 @@ There are a lot of ideas combining graphics, physics and ML that I sometimes hav
 - [Future improvements](#future-improvements)
 - [Conclusion](#conclusion)
 
-# Why make a new library?
+I started working on this library around 14 months ago, initially I didn't really plan to do much more than a few matrix operations for an optimization algorithm I wanted to implement in Unity, but there were quite a few things that I wanted to have on top of all of this and it sidetracked me into a writing an entire compiler (hello scope creep 👋). 
+
+The thing is, it's not the first time I tried to make a tensor library, [the first time](https://github.com/MichaelMoroz/TensorCL) was a whole 5 years ago and used OpenCL, as I didn't have an Nvidia GPU at the time. To be honest I've been completely unprepared to the magnitude of what it required, and while I did get it to a "somewhat" working state like having basic kernels and somewhat working autodiff using a tape, the lack of good debug tools and actual problems that I wanted to solve pretty much killed it. And for the things that I did want to work on, it was completely unsuited for, as I usually write simulations or graphics, and the overhead of doing a kernel per operation (especially unoptimized kernels) is just too bad to be useful.
+
+Since that time I've had a lot of ideas of what I would like a library like that to even look like, and wanted to try working on it again. However I did know, that for this project to survive I would need to make it suitable for projects I usually do, like [the ones I usually do on Shadertoy](https://www.shadertoy.com/user/michael0884). It might seem weird to you why I would make a specifically "tensor" library for something that is basically equivalent to writing shaders. But to be honest, shaders are not the perfect place for these use cases, and a lot of simulation/rendering algorithms can map quite well to high level "tensor-like" operations. While the limitations might force you to come up with creative solutions, for really large or complicated projects it just becomes more of a problem, and is very hard to iterate on quickly. This was one of the main reasons I didn't really touch ML too much for most of my pet projects (except stuff like [Neural Implicit Representations](https://www.shadertoy.com/view/DstGDX)), ML algorithms are usually quite orthogonal to the way you write shaders, usually being split into hundreds of kernel dispatches, while those shader algorithms are effectively just one megakernel usually. The only reasonable way to integrate neural networks into those is unrolling the network into a single thread, which can be quite unoptimal and limits their size. Not even talking about the fact that training them is completely out of the question. This brings up another problem, shaders don't have automatic differentiation, which is surprisingly much more useful than you might think. While its usually used for optimization algorithms like SGD, having the analytic gradient can also be useful for computing normals/curvature of things in shaders, or forces from potentials in simulations.
+
+So in this library, I hoped to somehow extend the applicability range of a Tensor library to more "shader-like" use cases like rendering and simulations. 
+
+And right now I can actually say that at least to some partial degree it did work out. Currently the library is something of a mix of slightly more low-level Numpy operations with shader-like control-flow and operations (most of the built-in scalar shader functions are passed through to Python). In terms of where it stands right now, its more low-level than something like JAX or PyTorch, but still not as low-level as Taichi as you still technically operate on something similar to tensors.
+
+<center><img src="{{ site.baseurl }}/images/high_low.PNG" height="250px"></center>
+
+# What can be done right now
+
+How exactly the library works under the hood I will explain a bit later, but first of all I wanted to show off some examples, as I believe that this is the fastest way to demonstrate what problems a library is suited to solve. As I was mainly focused on real time applications like rendering and simulations, most of these highlighted examples will be about that. Some more technical examples you can find in the [examples folder](https://github.com/MichaelMoroz/TensorFrost/tree/main/examples) in the repo.
+
+## Fluid simulation
+
+[---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/fluid_simulation.ipynb)
+
+<center><iframe width="560" height="315" src="https://www.youtube.com/embed/CVF4cZOsMK4?si=SJsZ2R_SIe-yyXgF" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
+
+Before all the algorithmic Numpy-like stuff, I initially played around with simulations that map nicely to multidimensional arrays, waves and Eulerian (grid based) fluids. For the most interesting example, I implemented a 2D fluid solver with a multigrid pressure solver, RK4 bicubic advection, and vorticity confinement. As this example didn't require any control flow, but only indexing and basic kernel fusion, it was a nice first test for the compiler. 
+
+Also never mind the boundary artifacts or the interpolation issues with the density, its fixable, but I didn't have enough time to mess around with it. I will probably implement a proper 3D fluid simulation next time anyway.
+
+## Fractal path tracer
+
+[---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/GUI/interactive_path_tracer.py)
+
+<center><iframe width="560" height="315" src="https://www.youtube.com/embed/ShWO5YSphOY?si=SqgPVOAhQNP_izF6" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
+
+In this particular case I created my own vec3 class in python here, as without automatic dimension unroll for small constant shape - the compiler will not be able to create a single kernel for it. 
+
+Syntactically speaking, this is 1-to-1 the same how I would write a path tracer in a shader, with the exception of there not being any explicit kernel definitions here. I also reused the bicubic interpolation from the fluid example for the camera reprojection, same with the bilinear sampler for the HDRI sky here.
+
+One amazing thing here, is that the normals are computed through backpropagation and not finite differences! It even improved the performance, as FD normals take 4x SDF calculations using the tetrahedron trick, while backwards mode autodiff only takes on the order of 2x. It does only work for unrolled SDF's like kaleidoscopic iterative fractals (KIF's), SDF's that require varying loop iterations like Mandelbulb will not be differentiable at the moment.
+
+What about bounding volume hierarchies (BVH) for triangle meshes? Right now you can't really use them, as the IR does not have a way to declare local arrays, and those will be required for the stack when traversing the BVH tree efficiently (you could actually emulate those with a giant number of local variables and `if`'s, but why). I suspect I might add those together with groupshared memory, as they will have similar syntax.
+
+At this point, now that I've also implemented modules and optimizers, I could also theoretically implement a [neural radiance cache](https://research.nvidia.com/publication/2021-06_real-time-neural-radiance-caching-path-tracing) here, as I can both train the network and trace the rays. But personally I'd probably prefer a sparse hash grid radiance cache, as its a bit more deterministic. 
+
+*PS. Looking at the next example, maybe you could use a hash grid + a small neural network together instead, for the radiance cache? This might improve the quality quite a lot*
+
+## Texture embedder with small neural network
+
+[---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Rendering/neural_embed.ipynb)
+
+<center><iframe width="560" height="315" src="https://www.youtube.com/embed/7uzuGftSYKk?si=xt17EQguu4pg_PlV" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
+
+[This is very similar to the examples I have done in shadertoy.](https://www.shadertoy.com/view/dd33zf) It's a small texture, usually 32*32, with an embedding in each pixel. Those embeddings are interpolated at some point, concatenated and passed to a small neural network that magically transforms that into a higher resolution image. The interpolation here is also the one from [iq's article "improved texture interpolation"](https://iquilezles.org/articles/texture/), while that interpolation is "fake" and has 0 gradients at the pixel edges, if you gave the neural net a set of those, but offset by half a pixel, it can actually recreate a proper C2 continuous image without you needing bicubic interpolation! (I didn't came up with this, all credits to [Instant-NGP, Appendix A](https://nvlabs.github.io/instant-ngp/assets/mueller2022instant.pdf)) Surprisingly, my tests show that bicubic is actually somehow worse at representing images here, than this fake smooth interpolaiton. I suspect the neural net has an easier time at "distorting" bilinearly interpolated values, rather than cubically interpolated ones, as fewer pixels are influenced.
+
+I used my Adam optimizer module to optimize the embedding image and the neural net, given a set of random samples from the original image. Of the interesting things, the gradients of the trilinear interpolation are just atomic adds to a tensor of the same shape as the embedding. It is probably as good as you can do it here anyway, given that the interpolation is at random unordered positions.
+
+## N-body SPH with a custom sphere rasterizer
+
+[---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/n-body.ipynb)
+
+<center><iframe width="560" height="315" src="https://www.youtube.com/embed/AxkabWearoA?si=mz5ZBtK1B1gh4z2L" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
+
+The code for the simulation here is very simple, first  computes the SPH densities for each particle using a `sum` over the gaussian SPH kernels:
+
+```py
+i, j, k = tf.indices([N, N, 3])
+dx = X[j,k] - X[i,k]
+dv = V[j,k] - V[i,k]
+
+def sph_kernel(dist, rad):
+    return tf.exp(-(dist / rad)**2.0)
+
+# Compute the SPH density
+dist = tf.norm(dx)
+rho = tf.sum(sph_kernel(dist, sph_rad), axis=1)
+```
+
+And the second part computes the forces, first computes the soft gravity potential, then its negative gradient for the gravitational force. After that it computes the friction (viscosity) and the SPH pressure force, which is the gradient of the SPH kernel times the pressure. There is also the spike force, which is keeping the particles from overlapping to have a nice uniform distribution.
+
+```py
+def pressure(rho):
+    return (rho - rest_density)
+
+# Compute the SPH forces
+d2 = tf.unsqueeze(tf.sum(dx**2.0))
+dist = tf.sqrt(d2 + 1e-4) # soft distance
+Fg = - tf.grad(gravity / dist, dx)
+weight = sph_kernel(dist, sph_rad)
+weightgrad = tf.grad(weight, dx)
+dvdotdx = tf.unsqueeze(tf.dot(dv, dx)) / (tf.sqrt(d2) + 1e-5)
+Fvisc = - viscosity * dvdotdx * weightgrad
+Fsph = stiffness * 0.5 * (pressure(rho[i]) + pressure(rho[j])) * weightgrad
+dist2 = (tf.sqrt(d2) + 1e-8)
+Fspike = - 250.0 * sph_kernel(dist, 1.0*sph_rad) * dx / (dist2*dist2)
+Fij = tf.select(i == j, 0.0, Fg + Fsph + Fvisc + Fspike)
+Fi = tf.sum(Fij, axis=1)
+
+Vnew = V + Fi * dt
+Xnew = X + V * dt
+```
+
+And thats about it! The compiler actually fuses all these operations and the sum into a single loop, meaning there are only 2 kernels here, 1 for the SPH densities, and another for the forces.
+
+The second part of this example is the rendering, which was also written purely in TensorFrost. Its a custom atomicMin (`tf.scatterMin`) rasterizer, which does a loop over all the pixels each particle sphere occupies on the screen, which is done by projecting the particle position onto the screen and doing atomic mins with a packed value high bits of which contain the depth, and low bits contain its index. The last pass after this one is the final shading, it computes the normals of each sphere, and computes its color.
+
+# So why make a new library?
 
 <center><img src="{{ site.baseurl }}/images/standards.png" height="250px"></center>
 
-Lets begin with asking why would I even want a whole new library in the first place, this would take an insane amount of time to develop, why not use something that already exists? There are probably already like a billion of existing libraries for every possible use case, no?
+Let's go over things that pushed me into writing a library, as it might seem that "why would you even write a new library?", it will indeed take a inordinate amount of work to get it to a useful state. And why would I not just use an existing library, as there are seemingly thousands of them?
 
-Of course, nothing stops me from using your usual ML libraries like PyTorch or JAX, but I really dislike their distinct disconnection from native GPU programming. These libraries effectively live in their own realm with their own rules and syntax, and hide some of the features the GPU has from the user, they have almost 0 crossover with how shaders operate. While technically you can write any algorithm you want in plain tensors, including graphics and simulations, depending on the number or complexity of operations - the performance might get terrible. The performance is actually not the only issue, control flow is quite annoying to express in these libraries, if even possible, as native loops for example, require doing absolutely cursed stuff like this in JAX: 
+***1. Performance scales poorly for non-ML specific operations***
+
+Of course, nothing stops me from using your usual ML libraries like PyTorch or JAX, but as I mentioned before, they weren't really designed to be applied to problems that I have. These libraries effectively live in their own realm with their own rules and syntax fine tuned for ML, and hide some of the features the GPU has from the user, they pretty much have 0 crossover with how shaders operate. While technically you can write any algorithm you want in plain tensors, including graphics and simulations, depending on the number or complexity of operations - the performance could get terrible. 
+
+Most of the Tensor compiler research that I've seen focuses on ML bottleneck, like efficiently utilizing cache, correctly aligning data for maximum performance of matrix multiplications, convolutions etc. Those aren't actually a bottleneck when dealing with (some) simulations or rendering.
+
+***2. Dynamic control flow is very hard to represent in classic ML libraries***
+   
+The performance is actually not the only issue, control flow can be very prevalent, but is quite annoying to express in these libraries, if even possible, as native loops in JAX for example, require doing absolutely cursed stuff like this: 
 
 ```py
 def factorial(n):
@@ -80,7 +174,8 @@ def factorial(n):
     return final_state[1]
 ```
 
-Such native loops are required if you want a varying iteration count for some operaiton, in simulations this could be, for example, summing a force from a varying number of particle neighbors. From a purely ML standpoint, this isn't really a problem, since such cases practically never happen, and on top of that, gradients of such loops might potentially have atrocious performance (or might just be uncomputable if the loop can be infinite). 
+
+Such native loops are required if you want a varying iteration count for some operation, in simulations this could be, for example, summing a force from a varying number of particle neighbors. Even something like Gaussian Splatting requires a variable loop per tile. From a purely ML standpoint, this isn't really a problem, since such cases practically never happen, and on top of that, gradients of such loops might potentially have atrocious performance (or might just be uncomputable if the loop can be theoretically infinite, as the compiler might not know). 
 
 You could alternatively write a dynamic mask that will depend on the iteration, and unroll the loop, but this would simply be slower and less readable. Like here, I once tried to make a vectorized Numpy function to computes the mandelbulb SDF:
 
@@ -105,30 +200,38 @@ def mandelbulb_sdf(pos, iter_num=mandelbulb_iter_num, power=mandelbulb_power):
     return 0.5 * np.log(r) * r / dr
 ```
 
-Usually, when hitting a performance bottleneck, you have to write a custom CUDA kernels, which is doable, but quite annoying, as it forces you to use separate environments, CUDA and Python.
+***3. Extending ML libraries with custom high-performance kernels requires using external tools/APIs like CUDA or Triton***
 
-There are actually domain specific languages (DSLs) that solve this problem, and make writing lower-lever code much nicer in python, like [Taichi](https://www.taichi-lang.org/) or [Nvidia's Warp](https://github.com/NVIDIA/warp), they are really nice for simulations or graphics, and Taichi is specifically fine tuned for high performance physics simulations and even has built in automatically optimized sparse grids. And while they are also differentiable, they still are a bit off from what I would consider "perfect", as you don't have all ML kind of operations, but you can write them if you really want, there are some[ Nerf implementations for Taichi](https://github.com/taichi-dev/taichi-nerfs). You could also interoperate them with PyTorch for example, this once again makes it less nice to work with. There is also [Triton](https://github.com/triton-lang/triton), but it's usually used more like a backend for other libraries (like PyTorch) rather than a standalone DSL, at least as far as I have seen.
+Usually, when hitting a performance bottleneck, you have to write a custom CUDA kernels, which is doable, but quite inconvenient, as it forces you to use separate environments, CUDA and Python.
 
-I also want to mention [Slang](https://github.com/shader-slang/slang), as its also a nice improvement over shaders given its added differentiability, and it would be nice if it was widely supported. But it is also not what I'm looking for.
+There are actually domain specific languages (DSLs) that allow you to write kernels in relatively high-level Python, like [Taichi](https://www.taichi-lang.org/) or [Nvidia's Warp](https://github.com/NVIDIA/warp), they are really nice for simulations or graphics, and Taichi specifically is fine tuned for high performance physics simulations and even has built in automatically optimized sparse grids. And while they are also differentiable, they still are a bit off from what I would consider "perfect", as you don't have access to the giant library of ML operations that PyTorch has for example. Of course you can still write ML using them if you really want, there are some[ Nerf implementations for Taichi](https://github.com/taichi-dev/taichi-nerfs), but they require much more code to represent. As a compromise you could also interoperate them with PyTorch for example, but once again, it makes it less convenient to work with. I can also mention [Triton](https://github.com/triton-lang/triton) here, but it's usually used more like a backend for other libraries (like PyTorch) rather than a standalone DSL, at least as far as I have seen.
+
+There is also [Slang](https://github.com/shader-slang/slang), which is quite different from all these from above, as its an improved shader language with added differentiability. It would be nice if it was widely supported. But its even more low level than something like Taichi.
+
+***4. No built-in easy to use real-time visualization or interactivity***
 
 When I want to do some advanced visualizations in Python, the options that are available in ML libraries are often hilariously bad. Usually you just end up making a bunch of matplotlib plots, which are not only slow, if you want to render like hundreds of millions of points or an animation, but also not interactive. (They are fine for papers tho)
 
 In the world of real-time graphics, you can render those points at 60fps, and you could even interact with them in real time. Seeing the things you are working on in real time is in some cases quite useful for quick iteration, and I feel like this is something you miss in your classic ML libs, where the usual interaction you have with your model - is staring at the loss graph for hours.
 
-Though, while I am stating these things, most large ML models are simply not visualizable in real time, and the ones that are, are usually not easy to interpret. Visualizations are usually most applicable to the intersection of ML/Physics/Graphics, like NERFs, diffusion, neural implicit representations, etc. Changing hyperparameters in real time and seeing its result on the training loss can also be somewhat interesting, but you do need the model to be rather performant for that.
+Though, while I am stating these things, most large ML models are simply not visualizable in real time, and the ones that are, are usually not easy to interpret. Visualizations are usually most applicable to the intersection of ML/Physics/Graphics, like NERFs, diffusion, neural implicit representations, etc. But I still think that even changing hyperparameters in real time and seeing its result on the training loss can also be somewhat interesting, though you do need the model to be rather performant for that.
 
-On the other side, in the world of real-time simulations and graphics, I've written custom kernels for every specific algorithm something needed: radix sorts, multigrid poission equation solver, numerical integrators, etc. So when I'm prototyping or having a new idea how to optimize the algorithm globally, it can get annoying to make global changes in the code structure, since they usually require a partial rewrite, creating new kernels and so on, and I don't really see why this coundn't be automated from higher-level operations.
+***5. Some simulation and graphics applications can benefit from a more high level description***
+
+On the other side, in the world of real-time simulations and graphics, I've written custom kernels for every specific algorithm something needed: radix sorts, multigrid Poisson equation solver, numerical integrators, etc. So when I'm prototyping or having a new idea how to optimize the algorithm globally, it can get annoying to make global changes in the code structure, since they usually require a partial rewrite, creating new kernels and so on, and I don't really see why this couldn't be automated from higher-level operations.
 
 In the end I was wondering: can I somehow combine the best of both worlds? 
-Being able to do both numpy-like operations while also doing more shader-like things in one place sounds somewhat impossible on paper, but I thought that maybe if you tuned the kernel generation algorithm to specifically be optimal for shader-like operation it might at least work for my use cases?
+Being able to do both numpy-like operations while also doing more shader-like things in one place sounds somewhat impossible on paper, but I thought that maybe if you tuned the kernel generation algorithm to specifically be optimal for shader-like operation it might at least work for my use cases? Afterwards I could still support ML use cases well enough even if I just shoehorned the matmul/reduction/convolution kernels separately.
 
-And even if it is impossible, combining everything into a single language would be nice, becauce the GPU development infrastructure is scattered all over the place and sometimes not even interoperable.
+And even if it is impossible, combining everything into a single language would be nice, because the GPU development infrastructure is scattered all over the place, some futures are available only in some places, while others are not, they can sometimes not even be interoperable. The development environments are completely separate, there are ML-specific debug tools on Linux, and graphics API specific debug tools on Windows only - and all of these things are using the same hardware - the GPU!
 
 # Architecture
 
 ## Kernel fusion
 
-When thinking about the architecture of what a library like this could be, I've first thought from the point of view of simple per-element operations and indexing. Nothing really stops you from writing Numpy code as if it was a shader, for example. However that would be extremely slow, why? Numpy executes a single operation over the entire tensor at a time, i.e. loads the data, does the single operation, then puts it back into memory. For a modern computer this is *extremely* inefficient, since the bandwidth and latency of system memory are nowhere near sufficient to keep up with the computational power of the processor. If you want to utilize all available resources - you need to utilize the cache hierarchy to its full extent. If you could cache intermediate results close to the ALU's of the processor and keep the intermediate results as long as possible there, you could get a massive speedup by reducing latencies by orders of magnitude. This is why modern processors have multiple levels of cache - they try to solve the issue of memory progress not keeping up with increasing performance. As a matter of fact since 2017 top tier consumer GPU memory bandwidth has only increased from 500Gb/s to 1Tb/s, while performance has spiked from 10 TFlops to 80 TFlops.
+When thinking about the architecture of what a library like this could be, I've first thought from the point of view of simple per-element operations and indexing. Nothing really stops you from writing Numpy code as if it was a shader, for example. However that would be extremely slow, why? Numpy usually executes a single operation over the entire tensor at a time, i.e. loads the data, does the single operation, then puts it back into memory. For a modern computer this is *extremely* inefficient, since the bandwidth and latency of system memory are nowhere near sufficient to keep up with the computational power of the processor. If you want to utilize all available resources - you need to utilize the cache hierarchy to its full extent. If you could cache intermediate results close to the ALU's of the processor and keep the intermediate results as long as possible there, you could get a massive speedup by reducing latencies by orders of magnitude. This is why modern processors have multiple levels of cache - they try to solve the issue of memory progress not keeping up with increasing performance. As a matter of fact since 2017 top tier consumer GPU memory bandwidth has only increased from 500Gb/s to 1Tb/s, while performance has spiked from 10 TFlops to 80 TFlops.
+
+<center><img src="{{ site.baseurl }}/images/cache_hierarchy.png" height="400px"></center>
 
 But optimizing this specific aspect when dealing with tensors is actually nothing new, the so called kernel fusion has been around for a while, and is used in tensor compilers like XLA or PyTorch's [TorchInductor](https://dev-discuss.pytorch.org/t/torchinductor-a-pytorch-native-compiler-with-define-by-run-ir-and-symbolic-shapes/747/3). And the degree to which they can do it is perfectly fine for most ML applications. However, to my knowledge, they do not fuse operations with already existing optimized kernels, even though in some cases this might be beneficial (Well, in TorchInductor there are only 2 operations that don't - conv and matmul). 
 
@@ -1082,94 +1185,6 @@ For this specific example its still quite nice, as we dont have a lot of algorit
 Right now there are only 2 runtime backends - C++/OpenMP and C++/OpenGL. After the compiler generates the C++ code for the shaders and the host, its compiled by the C++ compiler, and also by the OpenGL shader compiler (which is built in the driver and can have horrible bugs, by the way).
 
 I plan on also adding CUDA and Vulkan in the future, for the first one I could just compile everything, host and kernels into a single `.cu` file, and its probably relatively straightforward to do (will still need to keep OpenGL for visualization interop), but in the case of Vulkan I would need to write all the boilerplate code for handling basic compute, compiling shaders and memory allocation, that will probably take quite some time.
-
-# So what can we do with this?
-
-## Fluid simulation
-
-[---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/fluid_simulation.ipynb)
-
-<center><iframe width="560" height="315" src="https://www.youtube.com/embed/CVF4cZOsMK4?si=SJsZ2R_SIe-yyXgF" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
-
-Before all the algorithmic stuff, I initially played around with simulations that map nicely to multidimensional arrays, waves and Eulerian fluids. For the most interesting example, I implemented a 2D fluid solver with a multigrid pressure solver, RK4 bicubic advection, and vorticity confinement. As this example didn't require any control flow, but only indexing and basic kernel fusion, it was a nice first test for the compiler. 
-
-Also nevermind the boundary artifacts or the interpolation issues with the density, its fixable, but I didn't have enough time to mess around with it. I will probably implement a proper 3D fluid simulation next time anyway.
-
-## Fractal path tracer
-
-[---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/GUI/interactive_path_tracer.py)
-
-<center><iframe width="560" height="315" src="https://www.youtube.com/embed/ShWO5YSphOY?si=SqgPVOAhQNP_izF6" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
-
-In this particular case I created my own vec3 class in python here, as without automatic dimension unroll for small constant shape - the compiler will not be able to create a single kernel for it. 
-
-Syntactically speaking, this is 1-to-1 the same how I would write a path tracer in a shader, with the exception of there not being any explicit kernel definitions here. I also reused the bicubic interpolation from the fluid example for the camera reprojection, same with the bilinear sampler for the HDRI sky here.
-
-One amazing thing here, is that the normals are computed through backpropagation and not finite differences! It even improved the performance, as FD normals take 4x SDF calculations using the tetrahedron trick, while backwards mode autodiff only takes on the order of 2x. It does only work for unrolled SDF's like kaleidoscopic iterative fractals (KIF's), SDF's that require varying loop iterations like Mandelbulb will not be differentiable at the moment.
-
-What about bounding volume hierarchies (BVH) for triangle meshes? Right now you can't really use them, as the IR does not have a way to declare local arrays, and those will be required for the stack when traversing the BVH tree efficiently (you could actually emulate those with a giant number of local variables and `if`'s, but why). I suspect I might add those together with groupshared memory, as they will have similar syntax.
-
-At this point, now that I've also implemented modules and optimizers, I could also theoretically implement a [neural radiance cache](https://research.nvidia.com/publication/2021-06_real-time-neural-radiance-caching-path-tracing) here, as I can both train the network and trace the rays. But personally I'd probably prefer a sparse hash grid radiance cache, as its a bit more deterministic. 
-
-*PS. Looking at the next example, maybe you could use a hash grid + a small neural network together instead, for the radiance cache? This might improve the quality quite a lot*
-
-## Texture embedder with small neural network
-
-[---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Rendering/neural_embed.ipynb)
-
-<center><iframe width="560" height="315" src="https://www.youtube.com/embed/7uzuGftSYKk?si=xt17EQguu4pg_PlV" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
-
-[This is very similar to the examples I have done in shadertoy.](https://www.shadertoy.com/view/dd33zf) It's a small texture, usually 32*32, with an embedding in each pixel. Those embeddings are interpolated at some point, concatenated and passed to a small neural network that magically transforms that into a higher resolution image. The interpolation here is also the one from [iq's article "improved texture interpolation"](https://iquilezles.org/articles/texture/), while that interpolation is "fake" and has 0 gradients at the pixel edges, if you gave the neural net a set of those, but offset by half a pixel, it can actually recreate a proper C2 continuous image without you needing bicubic interpolation! (I didn't came up with this, all credits to [Instant-NGP, Appendix A](https://nvlabs.github.io/instant-ngp/assets/mueller2022instant.pdf)) Surprisingly, my tests show that bicubic is actually somehow worse at representing images here, than this fake smooth interpolaiton. I suspect the neural net has an easier time at "distorting" bilinearly interpolated values, rather than cubically interpolated ones, as fewer pixels are influenced.
-
-I used my Adam optimizer module to optimize the embedding image and the neural net, given a set of random samples from the original image. Of the interesting things, the gradients of the trilinear interpolation are just atomic adds to a tensor of the same shape as the embedding. It is probably as good as you can do it here anyway, given that the interpolation is at random unordered positions.
-
-## N-body SPH with a custom sphere rasterizer
-
-[---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/n-body.ipynb)
-
-<center><iframe width="560" height="315" src="https://www.youtube.com/embed/AxkabWearoA?si=mz5ZBtK1B1gh4z2L" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
-
-The code for the simulation here is very simple, first  computes the SPH densities for each particle using a `sum` over the gaussian SPH kernels:
-
-```py
-i, j, k = tf.indices([N, N, 3])
-dx = X[j,k] - X[i,k]
-dv = V[j,k] - V[i,k]
-
-def sph_kernel(dist, rad):
-    return tf.exp(-(dist / rad)**2.0)
-
-# Compute the SPH density
-dist = tf.norm(dx)
-rho = tf.sum(sph_kernel(dist, sph_rad), axis=1)
-```
-
-And the second part computes the forces, first computes the soft gravity potential, then its negative gradient for the gravitational force. After that it computes the friction (viscosity) and the SPH pressure force, which is the gradient of the SPH kernel times the pressure. There is also the spike force, which is keeping the particles from overlapping to have a nice uniform distribution.
-
-```py
-
-
-def pressure(rho):
-    return (rho - rest_density)
-
-# Compute the SPH forces
-d2 = tf.unsqueeze(tf.sum(dx**2.0))
-dist = tf.sqrt(d2 + 1e-4) # soft distance
-Fg = - tf.grad(gravity / dist, dx)
-weight = sph_kernel(dist, sph_rad)
-weightgrad = tf.grad(weight, dx)
-dvdotdx = tf.unsqueeze(tf.dot(dv, dx)) / (tf.sqrt(d2) + 1e-5)
-Fvisc = - viscosity * dvdotdx * weightgrad
-Fsph = stiffness * 0.5 * (pressure(rho[i]) + pressure(rho[j])) * weightgrad
-dist2 = (tf.sqrt(d2) + 1e-8)
-Fspike = - 250.0 * sph_kernel(dist, 1.0*sph_rad) * dx / (dist2*dist2)
-Fij = tf.select(i == j, 0.0, Fg + Fsph + Fvisc + Fspike)
-Fi = tf.sum(Fij, axis=1)
-```
-
-And thats about it! The compiler actually fuses all these operations and the sum into a single loop, meaning there are only 2 kernels here, 1 for the SPH densities, and another for the forces.
-
-The second part of this example is the rendering, which was also written purely in TensorFrost. Its a custom atomicMin (`tf.scatterMin`) rasterizer, which does a loop over all the pixels each particle sphere occupies on the screen, which is done by projecting the particle position onto the screen and doing atomic mins with a packed value high bits of which contain the depth, and low bits contain its index. The last pass after this one is the final shading, it computes the normals of each sphere, and computes its color.
    
 # What's the current performance compared to other tensor libraries?
 
@@ -1293,10 +1308,6 @@ The window handling functionality and ImGUI related python bindings are still ve
 First of all, given that it took me 14th month just to get to this point, the conclusion is simple: unless you have a year of free time - don't make a new machine learning library from scratch.
 
 Jokes aside, it is actually a really interesting learning experience. In fact, given the performance tests from above, if you properly improved the performance of the algorithmic primitives I use, like reductions and matmuls, and added more backends like CUDA, this library or a new version of it might become a viable choice for actual ML applications.
-
-<center><img src="{{ site.baseurl }}/images/high_low.PNG" height="250px"></center>
-
-However in the current state, it mostly takes a niche right in the middle between "low-level GPU" stuff and "high level ML".
 
 If anyone wants to help me with development, PR's are welcome! There is still like a million things missing, a million bugs waiting to be found, and by myself it would take a few more years for it to get into a more mature state.
 
