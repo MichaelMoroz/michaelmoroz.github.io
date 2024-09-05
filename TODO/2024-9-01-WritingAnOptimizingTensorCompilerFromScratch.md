@@ -176,7 +176,7 @@ def factorial(n):
 
 Which looks completely cursed. Now imagine multiple stacked loops - yikes
 
-Such native loops are required if you want a varying iteration count for some operation, in simulations this could be, for example, summing a force from a varying number of particle neighbors. Even something like Gaussian Splatting requires a variable loop per tile. From a purely ML standpoint, this isn't really a problem, since such cases practically never happen, and on top of that, gradients of such loops might potentially have atrocious performance (or might just be uncomputable if the loop can be theoretically infinite, as the compiler might not know). 
+Such native loops are required if you want a varying iteration count for some operation, in simulations this could be, for example, summing a force from a varying number of particle neighbors. Even something like Gaussian Splatting requires a variable loop per tile. From a purely classic ML standpoint, this isn't really a problem, since such cases practically never happen and the computational graph is absolutely static, and whats worse, autodiff gradients of such loops might potentially have atrocious performance (or might just be uncomputable if the loop can be theoretically infinite, as the compiler might not know the specific context where its being used). 
 
 You could alternatively write a dynamic mask that will depend on the iteration, and unroll the loop, but this would simply be slower and less readable. Like here, I once tried to make a vectorized Numpy function to computes the mandelbulb SDF:
 
