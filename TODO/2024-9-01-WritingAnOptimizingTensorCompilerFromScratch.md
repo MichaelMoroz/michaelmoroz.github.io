@@ -1,15 +1,21 @@
 ---
 layout: post
-title: Writing an optimizing tensor compiler from scratch 
+title: TensorFrost: Writing an optimizing tensor compiler from scratch 
 image: TensorFrost.png
 ---
 
 In this blog post I want to talk about the research and development results for a library that I started working on more than a year ago - [TensorFrost](https://github.com/MichaelMoroz/TensorFrost). Under the hood it's a static optimizing tensor compiler with a focus on being able to do more "shader-like" things while still keeping the ability to do high level linear algebra for ML in Numpy-like syntax with automatic differentiation support.
 
-*If you want to see actual real use code examples, jump to [So what can we do with this?](#so-what-can-we-do-with-this). If you want to see performance comparison against ML libraries go to [What's the current performance compared to other tensor libraries?](#whats-the-current-performance-compared-to-other-tensor-libraries)
-For documentation on basic functionality, read the [README](https://github.com/MichaelMoroz/TensorFrost/blob/main/README.md) file in the repo.*
+Example projects I did in TensorFrost:
 
-- [What can be done right now](#what-can-be-done-right-now)
+<a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/fluid_simulation.ipynb"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/fluid_sim.gif?raw=true" height="192px"></a>
+<a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/GUI/interactive_path_tracer.py"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/path_tracer.gif?raw=true" height="192px"></a>
+<a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/n-body.ipynb"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/n_body.gif?raw=true" height="192px"></a>
+<a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Rendering/neural_embed.ipynb"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/neural_embed.gif?raw=true" height="192px"></a>
+
+*For documentation on basic functionality, read the [README](https://github.com/MichaelMoroz/TensorFrost/blob/main/README.md) file in the repo.*
+
+- [Examples using TensorFrost](#examples-using-tensorfrost)
   - [Fluid simulation](#fluid-simulation)
   - [Fractal path tracer](#fractal-path-tracer)
   - [Texture embedder with small neural network](#texture-embedder-with-small-neural-network)
@@ -17,8 +23,8 @@ For documentation on basic functionality, read the [README](https://github.com/M
 - [So why make a new library?](#so-why-make-a-new-library)
 - [Architecture](#architecture)
   - [Kernel fusion](#kernel-fusion)
-  - [First prototype](#first-prototype)
-  - [Second prototype](#second-prototype)
+  - [First prototype - DAG](#first-prototype---dag)
+  - [Second prototype - Multilevel linked list](#second-prototype---multilevel-linked-list)
     - [Optimization and generation of the kernels](#optimization-and-generation-of-the-kernels)
     - [Algorithmic operations](#algorithmic-operations)
     - [Advanced kernel fusion](#advanced-kernel-fusion)
@@ -52,7 +58,7 @@ And right now I can actually say that at least to some partial degree it did wor
 
 <center><img src="{{ site.baseurl }}/images/high_low.PNG" height="250px"></center>
 
-# What can be done right now
+# Examples using TensorFrost
 
 How exactly the library works under the hood I will explain a bit later, but first of all I wanted to show off some examples, as I believe that this is the fastest way to demonstrate what problems a library is suited to solve. As I was mainly focused on real time applications like rendering and simulations, most of these highlighted examples will be about that. Some more technical examples you can find in the [examples folder](https://github.com/MichaelMoroz/TensorFrost/tree/main/examples) in the repo.
 
@@ -241,7 +247,7 @@ But optimizing this specific aspect when dealing with tensors is actually nothin
 
 If you tried to write algorithms, like the ones I write in Shadertoy, you will eventually start to hit the limits these compilers have. The number of operation nodes you could fuse now rises to the order of thousands, not even mentioning the complex control flow, and ideally they should fit into a single kernel, but its highly likely you will end up with a lot of smaller kernels if you apply fusion naively.
 
-## First prototype
+## First prototype - DAG
 
 When I initally started prototyping the operation graph compiler in C# in Unity (not exactly your typical place for a compiler prototype, I know), I kept the graph just as a simple Directed Acyclic Graph (DAG), where each node was a single operation with some tensor shape. When I began testing the kernel clustering even on simple physics or rendering, the clustering algorithm quickly started to get out of hand, as in the example below. 
 
@@ -265,7 +271,7 @@ Adding the problem of exponentially growing number of possible kernel fusions an
 
 I also wanted to have at least some sort of control flow, which wasn't obvious how to add into this specific graph for me, at the time.
 
-## Second prototype
+## Second prototype - Multilevel linked list
 
 > Any sufficiently complicated C or Fortran program contains an ad hoc, informally-specified, bug-ridden, slow implementation of half of Common Lisp.
 
