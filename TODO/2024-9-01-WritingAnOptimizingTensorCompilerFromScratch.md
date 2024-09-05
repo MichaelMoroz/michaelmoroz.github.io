@@ -153,7 +153,7 @@ Let's go over things that pushed me into writing a library, as it might seem tha
 
 Of course, nothing stops me from using your usual ML libraries like PyTorch or JAX, but as I mentioned before, they weren't really designed to be applied to problems that I have. These libraries effectively live in their own realm with their own rules and syntax fine tuned for ML, and hide some of the features the GPU has from the user, they pretty much have 0 crossover with how shaders operate. While technically you can write any algorithm you want in plain tensors, including graphics and simulations, depending on the number or complexity of operations - the performance could get terrible. 
 
-Most of the Tensor compiler research that I've seen focuses on ML bottleneck, like efficiently utilizing cache, correctly aligning data for maximum performance of matrix multiplications, convolutions etc. Those aren't actually a bottleneck when dealing with (some) simulations or rendering.
+Most of the Tensor compiler research that I've seen focuses on ML bottlenecks, like efficiently utilizing cache, correctly aligning data for maximum performance of matrix multiplications, convolutions etc. Those usually aren't a bottleneck when dealing with simulations or rendering, but the dynamic nature of the code and complexity is.
 
 ***2. Dynamic control flow is very hard to represent in classic ML libraries***
    
