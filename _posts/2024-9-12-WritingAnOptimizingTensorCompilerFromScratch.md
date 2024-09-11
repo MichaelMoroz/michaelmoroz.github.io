@@ -1,6 +1,7 @@
 ---
 layout: post
 title: Writing an optimizing tensor compiler from scratch 
+image: SpaceEngineBH.jpg
 ---
 
 <a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/fluid_simulation.ipynb"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/fluid_sim.gif?raw=true" height="192px"></a>
