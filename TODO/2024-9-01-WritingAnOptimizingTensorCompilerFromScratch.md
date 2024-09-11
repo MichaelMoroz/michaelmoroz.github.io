@@ -1,18 +1,19 @@
 ---
 layout: post
 title: Writing an optimizing tensor compiler from scratch 
-image: TensorFrost.png
 ---
 
-In this blog post I want to talk about the research and development results for a library that I started working on more than a year ago - [TensorFrost](https://github.com/MichaelMoroz/TensorFrost). Under the hood it's a static optimizing tensor compiler with a focus on being able to do more "shader-like" things while still keeping the ability to do high level linear algebra for ML in Numpy-like syntax with automatic differentiation support.
-
-[Some of the more interesting pet projects I tried in TensorFrost:](#examples-using-tensorfrost)
 
 <a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/fluid_simulation.ipynb"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/fluid_sim.gif?raw=true" height="192px"></a>
 <a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/GUI/interactive_path_tracer.py"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/path_tracer.gif?raw=true" height="192px"></a>
 <a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/n-body.ipynb"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/n_body.gif?raw=true" height="192px"></a>
 <a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Rendering/neural_embed.ipynb"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/neural_embed.gif?raw=true" height="192px"></a>
 <a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/ML/NCA/"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/nca.gif?raw=true" height="192px"></a>
+
+<center> *[Some of the more interesting pet projects I tried in TensorFrost](#examples-using-tensorfrost)* </center>
+
+In this blog post I want to talk about the research and development results for a library that I started working on more than a year ago - [TensorFrost](https://github.com/MichaelMoroz/TensorFrost). Under the hood it's a static optimizing tensor compiler with a focus on being able to do more "shader-like" things while still keeping the ability to do high level linear algebra for ML in Numpy-like syntax with automatic differentiation support.
+
 
 *For documentation on basic functionality, read the [README](https://github.com/MichaelMoroz/TensorFrost/blob/main/README.md) file in the repo.*
 
@@ -1219,7 +1220,9 @@ The second part of this example is the rendering, which was also written purely 
 
 I always wanted to recreate the results of the [Growing Neural Cellular Automata](https://distill.pub/2020/growing-ca/) article, as the way the model worked was very similar to [some](https://www.shadertoy.com/view/Wt2BR1) shadertoys I did!
 
-While implementing it there were some problems with unrolled iterations, the number of kernels got so huge some of the fused ones accessed more buffers than OpenGL supports, which led to a compilation fail. I needed to restrict fusion manually for this to not happen, until I implement an automatic way to restric kernel size. Ideally I'd want the compiler to be capable to take gradients of loops natively so that it doesn't generate a thousand kernels, but thats for the future I guess. But right now I keep the iteration count at around 30. The original used 60-90 as far as I remember though. Increasing the fire rate does reduce the required iteration count, as it "technically" increases the average time-step of the simulation, so I did just that.
+While implementing it there were some problems with unrolled iterations, the number of kernels got so huge some of the fused ones accessed more buffers than OpenGL supports, which led to a compilation fail. I manually restricted fusion for this to not happen by doing a "hack". I did that by introducing a `.stop_fusion()` method, which is absolutely hilarious given fusion was our initial goal. I guess it would be better to have an automatic way to restric kernel size in the future. 
+
+Ideally I'd want the compiler to be capable to take gradients of loops natively so that it doesn't generate a thousand kernels, but thats for the future I guess. Right now I keep the iteration count at around 30, while the original used 60-90 as far as I remember. Increasing the fire rate does reduce the required iteration count, as it "technically" increases the average time-step of the simulation, so I did just that.
 
 In my own implementation I did a few changes compared to the original paper, notably I've added a laplacian input kernel, as it actually reduces checkerboard artifacts and improves convergense quite drastically. Sobel kernels have a step size of 2*dx, while the laplacian kernel has dx which makes it more accurate. It can also now natively emulate diffusion equations, before it needed to do gradients of gradients to do that.
 
