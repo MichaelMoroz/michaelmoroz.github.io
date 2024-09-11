@@ -158,10 +158,10 @@ When thinking about the architecture of what a library like this could be, I've 
 <center>
 <table>
   <tr>
-    <th><img src="{{ site.baseurl }}/images/cache_hierarchy.png" height="400px"></th>
+    <th><img src="{{ site.baseurl }}/images/cache_hierarchy.png" height="250px"></th>
   </tr>
   <tr>
-    <th>Tiers of memory of a typical GPU</th>
+    <th><i>Tiers of memory of a typical GPU</i></th>
   </tr>
 </table>
 </center>
