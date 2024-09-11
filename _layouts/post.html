@@ -16,7 +16,9 @@ MathJax.Hub.Config({
 <article class="post">
   <h1>{{ page.title }}</h1>
 	
+  {% if page.image %}
   <center><img src="{{ site.baseurl }}/images/{{ page.image }}" style="width:60%;"></center>
+  {% endif %}
   
   <div class="entry">
     {{ content }}
