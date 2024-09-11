@@ -8,15 +8,6 @@ title: Writing an optimizing tensor compiler from scratch
 <a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/n-body.ipynb"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/n_body.gif?raw=true" height="192px"></a>
 <a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Rendering/neural_embed.ipynb"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/neural_embed.gif?raw=true" height="192px"></a>
 <a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/ML/NCA/"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/nca.gif?raw=true" height="192px"></a>
-
-<center>
-<div markdown="1"> 
-
-*[Some of my more interesting pet projects in TensorFrost](#examples-using-tensorfrost)* 
-
-</div>
-</center>
-
 In this blog post I want to talk about the research and development results for a library that I started working on more than a year ago - [TensorFrost](https://github.com/MichaelMoroz/TensorFrost). Under the hood it's a static optimizing tensor compiler with a focus on being able to do more "shader-like" things while still keeping the ability to do high level linear algebra for ML in Numpy-like syntax with automatic differentiation support.
 
 
