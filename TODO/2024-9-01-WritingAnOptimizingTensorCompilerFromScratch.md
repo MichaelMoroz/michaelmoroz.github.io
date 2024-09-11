@@ -6,20 +6,16 @@ image: TensorFrost.png
 
 In this blog post I want to talk about the research and development results for a library that I started working on more than a year ago - [TensorFrost](https://github.com/MichaelMoroz/TensorFrost). Under the hood it's a static optimizing tensor compiler with a focus on being able to do more "shader-like" things while still keeping the ability to do high level linear algebra for ML in Numpy-like syntax with automatic differentiation support.
 
-Example projects I did in TensorFrost:
+[Some of the more interesting pet projects I tried in TensorFrost:](#examples-using-tensorfrost)
 
 <a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/fluid_simulation.ipynb"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/fluid_sim.gif?raw=true" height="192px"></a>
 <a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/GUI/interactive_path_tracer.py"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/path_tracer.gif?raw=true" height="192px"></a>
 <a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/n-body.ipynb"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/n_body.gif?raw=true" height="192px"></a>
 <a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Rendering/neural_embed.ipynb"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/neural_embed.gif?raw=true" height="192px"></a>
+<a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/ML/NCA/"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/nca.gif?raw=true" height="192px"></a>
 
 *For documentation on basic functionality, read the [README](https://github.com/MichaelMoroz/TensorFrost/blob/main/README.md) file in the repo.*
 
-- [Examples using TensorFrost](#examples-using-tensorfrost)
-  - [Fluid simulation](#fluid-simulation)
-  - [Fractal path tracer](#fractal-path-tracer)
-  - [Texture embedder with small neural network](#texture-embedder-with-small-neural-network)
-  - [N-body SPH with a custom sphere rasterizer](#n-body-sph-with-a-custom-sphere-rasterizer)
 - [So why make a new library?](#so-why-make-a-new-library)
 - [Architecture](#architecture)
   - [Kernel fusion](#kernel-fusion)
@@ -39,11 +35,21 @@ Example projects I did in TensorFrost:
 - [Backends](#backends)
   - [Codegen](#codegen)
   - [Runtimes](#runtimes)
+- [Examples using TensorFrost](#examples-using-tensorfrost)
+  - [Fluid simulation](#fluid-simulation)
+  - [Fractal path tracer](#fractal-path-tracer)
+  - [Texture embedder with small neural network](#texture-embedder-with-small-neural-network)
+  - [N-body SPH with a custom sphere rasterizer](#n-body-sph-with-a-custom-sphere-rasterizer)
+  - [Neural Cellular Automata](#neural-cellular-automata)
 - [What's the current performance compared to other tensor libraries?](#whats-the-current-performance-compared-to-other-tensor-libraries)
   - [N-body simulation](#n-body-simulation)
   - [MNIST with a convolutional network](#mnist-with-a-convolutional-network)
   - [What about some more advanced models?](#what-about-some-more-advanced-models)
 - [Future improvements](#future-improvements)
+- [Problems left to solve](#problems-left-to-solve)
+  - [Compilation time scales quadratically with Tensor Program size](#compilation-time-scales-quadratically-with-tensor-program-size)
+  - [Some performance issue are not obvious without using a profiler/debugger](#some-performance-issue-are-not-obvious-without-using-a-profilerdebugger)
+  - [Compiler tends to fall apart when trying to implement a completely new thing](#compiler-tends-to-fall-apart-when-trying-to-implement-a-completely-new-thing)
 - [Conclusion](#conclusion)
 
 I started working on this library around 14 months ago, initially I didn't really plan to do much more than a few matrix operations for an optimization algorithm I wanted to implement in Unity, but there were quite a few things that I wanted to have on top of all of this and it sidetracked me into a writing an entire compiler (hello scope creep 👋). 
@@ -54,100 +60,9 @@ Since that time I've had a lot of ideas of what I would like a library like that
 
 So in this library, I hoped to somehow extend the applicability range of a Tensor library to more "shader-like" use cases like rendering and simulations. 
 
-And right now I can actually say that at least to some partial degree it did work out. Currently the library is something of a mix of slightly more low-level Numpy operations with shader-like control-flow and operations (most of the built-in scalar shader functions are passed through to Python). In terms of where it stands right now, its more low-level than something like JAX or PyTorch, but still not as low-level as Taichi as you still technically operate on something similar to tensors.
+And right now I can actually say that at least to some partial degree it did work out. Currently the library is something of a mix of slightly more low-level Numpy-like operations with shader-like control-flow and operations (most of the built-in scalar shader functions are passed through to Python). In terms of where it stands right now, its more low-level than something like JAX or PyTorch, but still not as low-level as Taichi as you still technically operate on something similar to tensors.
 
 <center><img src="{{ site.baseurl }}/images/high_low.PNG" height="250px"></center>
-
-# Examples using TensorFrost
-
-How exactly the library works under the hood I will explain a bit later, but first of all I wanted to show off some examples, as I believe that this is the fastest way to demonstrate what problems a library is suited to solve. As I was mainly focused on real time applications like rendering and simulations, most of these highlighted examples will be about that. Some more technical examples you can find in the [examples folder](https://github.com/MichaelMoroz/TensorFrost/tree/main/examples) in the repo.
-
-## Fluid simulation
-
-[---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/fluid_simulation.ipynb)
-
-<center><iframe width="560" height="315" src="https://www.youtube.com/embed/CVF4cZOsMK4?si=SJsZ2R_SIe-yyXgF" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
-
-Before all the algorithmic Numpy-like stuff, I initially played around with simulations that map nicely to multidimensional arrays, waves and Eulerian (grid based) fluids. For the most interesting example, I implemented a 2D fluid solver with a multigrid pressure solver, RK4 bicubic advection, and vorticity confinement. As this example didn't require any control flow, but only indexing and basic kernel fusion, it was a nice first test for the compiler. 
-
-Also never mind the boundary artifacts or the interpolation issues with the density, its fixable, but I didn't have enough time to mess around with it. I will probably implement a proper 3D fluid simulation next time anyway.
-
-## Fractal path tracer
-
-[---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/GUI/interactive_path_tracer.py)
-
-<center><iframe width="560" height="315" src="https://www.youtube.com/embed/ShWO5YSphOY?si=SqgPVOAhQNP_izF6" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
-
-In this particular case I created my own vec3 class in python here, as without automatic dimension unroll for small constant shape - the compiler will not be able to create a single kernel for it. 
-
-Syntactically speaking, this is 1-to-1 the same how I would write a path tracer in a shader, with the exception of there not being any explicit kernel definitions here. I also reused the bicubic interpolation from the fluid example for the camera reprojection, same with the bilinear sampler for the HDRI sky here.
-
-One amazing thing here, is that the normals are computed through backpropagation and not finite differences! It even improved the performance, as FD normals take 4x SDF calculations using the tetrahedron trick, while backwards mode autodiff only takes on the order of 2x. It does only work for unrolled SDF's like kaleidoscopic iterative fractals (KIF's), SDF's that require varying loop iterations or breaks, like Mandelbulb will not be differentiable at the moment.
-
-What about bounding volume hierarchies (BVH) for triangle meshes? Right now you can't really use them, as the IR does not have a way to declare local arrays, and those will be required for the stack when traversing the BVH tree efficiently (you could actually emulate those with a giant number of local variables and `if`'s, but why). I suspect I might add those together with groupshared memory, as they will have similar syntax.
-
-At this point, now that I've also implemented modules and optimizers, I could also theoretically implement a [neural radiance cache](https://research.nvidia.com/publication/2021-06_real-time-neural-radiance-caching-path-tracing) here, as I can both train the network and trace the rays. But personally I'd probably prefer a sparse hash grid radiance cache, as its a bit more deterministic. 
-
-*PS. Looking at the next example, maybe you could use a hash grid + a small neural network together instead, for the radiance cache? This might improve the quality quite a lot*
-
-## Texture embedder with small neural network
-
-[---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Rendering/neural_embed.ipynb)
-
-<center><iframe width="560" height="315" src="https://www.youtube.com/embed/7uzuGftSYKk?si=xt17EQguu4pg_PlV" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
-
-[This is very similar to the examples I have done in shadertoy.](https://www.shadertoy.com/view/dd33zf) It's a small texture, usually 32*32, with an embedding in each pixel. Those embeddings are interpolated at some point in space, concatenated and passed to a small neural network that magically transforms that into a higher resolution image. The interpolation here is also the one from [iq's article "improved texture interpolation"](https://iquilezles.org/articles/texture/), while that interpolation is "fake" and has 0 gradients at the pixel edges, if you gave the neural net a set of those, but offset by half a pixel, it can actually recreate a proper C2 continuous image without you needing bicubic interpolation! (I didn't come up with this, all credits to [Instant-NGP, Appendix A](https://nvlabs.github.io/instant-ngp/assets/mueller2022instant.pdf)) Surprisingly, my tests show that bicubic is actually somehow worse at representing images here, than this fake smooth interpolaiton. I suspect the neural net has an easier time at "distorting" bilinearly interpolated values, rather than cubically interpolated ones, as fewer pixels are influenced.
-
-I used my Adam optimizer module to optimize the embedding image and the neural net, given a set of random samples from the original image. Of the interesting things, the gradients of the trilinear interpolation are just atomic adds to a tensor of the same shape as the embedding. It is probably as good as you can do it here anyway, given that the interpolation is at random unordered positions.
-
-## N-body SPH with a custom sphere rasterizer
-
-[---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/n-body.ipynb)
-
-<center><iframe width="560" height="315" src="https://www.youtube.com/embed/AxkabWearoA?si=mz5ZBtK1B1gh4z2L" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
-
-The code for the simulation here is very simple, first  computes the SPH densities for each particle using a `sum` over the gaussian SPH kernels:
-
-```py
-i, j, k = tf.indices([N, N, 3])
-dx = X[j,k] - X[i,k]
-dv = V[j,k] - V[i,k]
-
-def sph_kernel(dist, rad):
-    return tf.exp(-(dist / rad)**2.0)
-
-# Compute the SPH density
-dist = tf.norm(dx)
-rho = tf.sum(sph_kernel(dist, sph_rad), axis=1)
-```
-
-And the second part computes the forces, first computes the soft gravity potential, then its negative gradient for the gravitational force. After that it computes the friction (viscosity) and the SPH pressure force, which is the gradient of the SPH kernel times the pressure. There is also the spike force, which is keeping the particles from overlapping to have a nice uniform distribution.
-
-```py
-def pressure(rho):
-    return (rho - rest_density)
-
-# Compute the SPH forces
-d2 = tf.unsqueeze(tf.sum(dx**2.0))
-dist = tf.sqrt(d2 + 1e-4) # soft distance
-Fg = - tf.grad(gravity / dist, dx)
-weight = sph_kernel(dist, sph_rad)
-weightgrad = tf.grad(weight, dx)
-dvdotdx = tf.unsqueeze(tf.dot(dv, dx)) / (tf.sqrt(d2) + 1e-5)
-Fvisc = - viscosity * dvdotdx * weightgrad
-Fsph = stiffness * 0.5 * (pressure(rho[i]) + pressure(rho[j])) * weightgrad
-dist2 = (tf.sqrt(d2) + 1e-8)
-Fspike = - 250.0 * sph_kernel(dist, 1.0*sph_rad) * dx / (dist2*dist2)
-Fij = tf.select(i == j, 0.0, Fg + Fsph + Fvisc + Fspike)
-Fi = tf.sum(Fij, axis=1)
-
-Vnew = V + Fi * dt
-Xnew = X + V * dt
-```
-
-And thats about it! The compiler actually fuses all these operations and the sum into a single loop, meaning there are only 2 kernels here, 1 for the SPH densities, and another for the forces.
-
-The second part of this example is the rendering, which was also written purely in TensorFrost. Its a custom atomicMin (`tf.scatterMin`) rasterizer, which does a loop over all the pixels each particle sphere occupies on the screen, which is done by projecting the particle position onto the screen and doing atomic mins with a packed value high bits of which contain the depth, and low bits contain its index. The last pass after this one is the final shading, it computes the normals of each sphere, and computes its color.
 
 # So why make a new library?
 
@@ -912,7 +827,7 @@ class SmolNet(tf.Module):
         #specify a custom random scale and offset for the weights when initializing
         self.W = tf.Parameter([16, -1], tf.float32, random_scale=0.01, random_offset=0.0)
         #dont compute gradients for the bias
-        self.b = tf.Parameter([-1], tf.float32, requires_grad=False)
+        self.b = tf.Parameter([-1], tf.float32, optimize=False)
         
     def assert_parameters(self):
         #makes sure that the compiler knows that b has shape compatible with W
@@ -933,7 +848,7 @@ When initializing the module you can add 3 types of TensorFrost accessible param
 
 The shape argument of the parameter can be a list of integers, where -1 means that the shape is not specified yet, and will be inferred from the input tensor. If you need to compute an operation over several tensors of unspecified shape, you need to assert the shapes in the `assert_parameters` function.
 `random_scale` and `random_offset` are used to initialize the weights with random values, and are optional, by default the weights are initialized with Xavier initialization for uniform random values.
-`requires_grad` is used to specify if the parameter should be trained or not, by default all parameters are trainable. This argument does not stop you from computing `tf.grad` manually, it is just used to specify if the parameter should be updated by the optimizer module.
+`optimize` is used to specify if the parameter should be trained or not, by default all parameters are trainable. This argument does not stop you from computing `tf.grad` manually, it is just used to specify if the parameter should be updated by the optimizer module.
 
 By itself the module does not do anything, you need to do a second initialization step to either use it inside a TensorProgram, or initialize it as a container for the tensors outside of the program.
 
@@ -1198,6 +1113,115 @@ Right now there are only 2 runtime backends - C++/OpenMP and C++/OpenGL. After t
 
 I plan on also adding CUDA and Vulkan in the future, for the first one I could just compile everything, host and kernels into a single `.cu` file, and its probably relatively straightforward to do (will still need to keep OpenGL for visualization interop), but in the case of Vulkan I would need to write all the boilerplate code for handling basic compute, compiling shaders and memory allocation, that will probably take quite some time.
    
+
+# Examples using TensorFrost
+
+## Fluid simulation
+
+[---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/fluid_simulation.ipynb)
+
+<center><iframe width="560" height="315" src="https://www.youtube.com/embed/CVF4cZOsMK4?si=SJsZ2R_SIe-yyXgF" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
+
+Before all the algorithmic Numpy-like stuff, I initially played around with simulations that map nicely to multidimensional arrays, waves and Eulerian (grid based) fluids. For the most interesting example, I implemented a 2D fluid solver with a multigrid pressure solver, RK4 bicubic advection, and vorticity confinement. As this example didn't require any control flow, but only indexing and basic kernel fusion, it was a nice first test for the compiler. 
+
+Also never mind the boundary artifacts or the interpolation issues with the density, its fixable, but I didn't have enough time to mess around with it. I will probably implement a proper 3D fluid simulation next time anyway.
+
+## Fractal path tracer
+
+[---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/GUI/interactive_path_tracer.py)
+
+<center><iframe width="560" height="315" src="https://www.youtube.com/embed/ShWO5YSphOY?si=SqgPVOAhQNP_izF6" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
+
+In this particular case I created my own vec3 class in python here, as without automatic dimension unroll for small constant shape - the compiler will not be able to create a single kernel for it. 
+
+Syntactically speaking, this is 1-to-1 the same how I would write a path tracer in a shader, with the exception of there not being any explicit kernel definitions here. I also reused the bicubic interpolation from the fluid example for the camera reprojection, same with the bilinear sampler for the HDRI sky here.
+
+One amazing thing here, is that the normals are computed through backpropagation and not finite differences! It even improved the performance, as FD normals take 4x SDF calculations using the tetrahedron trick, while backwards mode autodiff only takes on the order of 2x. It does only work for unrolled SDF's like kaleidoscopic iterative fractals (KIF's), SDF's that require varying loop iterations or breaks, like Mandelbulb will not be differentiable at the moment.
+
+What about bounding volume hierarchies (BVH) for triangle meshes? Right now you can't really use them, as the IR does not have a way to declare local arrays, and those will be required for the stack when traversing the BVH tree efficiently (you could actually emulate those with a giant number of local variables and `if`'s, but why). I suspect I might add those together with groupshared memory, as they will have similar syntax.
+
+At this point, now that I've also implemented modules and optimizers, I could also theoretically implement a [neural radiance cache](https://research.nvidia.com/publication/2021-06_real-time-neural-radiance-caching-path-tracing) here, as I can both train the network and trace the rays. But personally I'd probably prefer a sparse hash grid radiance cache, as its a bit more deterministic. 
+
+*PS. Looking at the next example, maybe you could use a hash grid + a small neural network together instead, for the radiance cache? This might improve the quality quite a lot*
+
+## Texture embedder with small neural network
+
+[---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Rendering/neural_embed.ipynb)
+
+<center><iframe width="560" height="315" src="https://www.youtube.com/embed/7uzuGftSYKk?si=xt17EQguu4pg_PlV" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
+
+[This is very similar to the examples I have done in shadertoy.](https://www.shadertoy.com/view/dd33zf) It's a small texture, usually 32*32, with an embedding in each pixel. Those embeddings are interpolated at some point in space, concatenated and passed to a small neural network that magically transforms that into a higher resolution image. The interpolation here is also the one from [iq's article "improved texture interpolation"](https://iquilezles.org/articles/texture/), while that interpolation is "fake" and has 0 gradients at the pixel edges, if you gave the neural net a set of those, but offset by half a pixel, it can actually recreate a proper C2 continuous image without you needing bicubic interpolation! (I didn't come up with this, all credits to [Instant-NGP, Appendix A](https://nvlabs.github.io/instant-ngp/assets/mueller2022instant.pdf)) Surprisingly, my tests show that bicubic is actually somehow worse at representing images here, than this fake smooth interpolaiton. I suspect the neural net has an easier time at "distorting" bilinearly interpolated values, rather than cubically interpolated ones, as fewer pixels are influenced.
+
+I used my Adam optimizer module to optimize the embedding image and the neural net, given a set of random samples from the original image. Of the interesting things, the gradients of the trilinear interpolation are just atomic adds to a tensor of the same shape as the embedding. It is probably as good as you can do it here anyway, given that the interpolation is at random unordered positions.
+
+## N-body SPH with a custom sphere rasterizer
+
+[---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/n-body.ipynb)
+
+<center><iframe width="560" height="315" src="https://www.youtube.com/embed/AxkabWearoA?si=mz5ZBtK1B1gh4z2L" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
+
+The code for the simulation here is very simple, first  computes the SPH densities for each particle using a `sum` over the gaussian SPH kernels:
+
+```py
+i, j, k = tf.indices([N, N, 3])
+dx = X[j,k] - X[i,k]
+dv = V[j,k] - V[i,k]
+
+def sph_kernel(dist, rad):
+    return tf.exp(-(dist / rad)**2.0)
+
+# Compute the SPH density
+dist = tf.norm(dx)
+rho = tf.sum(sph_kernel(dist, sph_rad), axis=1)
+```
+
+And the second part computes the forces, first computes the soft gravity potential, then its negative gradient for the gravitational force. After that it computes the friction (viscosity) and the SPH pressure force, which is the gradient of the SPH kernel times the pressure. There is also the spike force, which is keeping the particles from overlapping to have a nice uniform distribution.
+
+```py
+def pressure(rho):
+    return (rho - rest_density)
+
+# Compute the SPH forces
+d2 = tf.unsqueeze(tf.sum(dx**2.0))
+dist = tf.sqrt(d2 + 1e-4) # soft distance
+Fg = - tf.grad(gravity / dist, dx)
+weight = sph_kernel(dist, sph_rad)
+weightgrad = tf.grad(weight, dx)
+dvdotdx = tf.unsqueeze(tf.dot(dv, dx)) / (tf.sqrt(d2) + 1e-5)
+Fvisc = - viscosity * dvdotdx * weightgrad
+Fsph = stiffness * 0.5 * (pressure(rho[i]) + pressure(rho[j])) * weightgrad
+dist2 = (tf.sqrt(d2) + 1e-8)
+Fspike = - 250.0 * sph_kernel(dist, 1.0*sph_rad) * dx / (dist2*dist2)
+Fij = tf.select(i == j, 0.0, Fg + Fsph + Fvisc + Fspike)
+Fi = tf.sum(Fij, axis=1)
+
+Vnew = V + Fi * dt
+Xnew = X + V * dt
+```
+
+And thats about it! The compiler actually fuses all these operations and the sum into a single loop, meaning there are only 2 kernels here, 1 for the SPH densities, and another for the forces.
+
+The second part of this example is the rendering, which was also written purely in TensorFrost. Its a custom atomicMin (`tf.scatterMin`) rasterizer, which does a loop over all the pixels each particle sphere occupies on the screen, which is done by projecting the particle position onto the screen and doing atomic mins with a packed value high bits of which contain the depth, and low bits contain its index. The last pass after this one is the final shading, it computes the normals of each sphere, and computes its color.
+  
+## Neural Cellular Automata
+
+[---Link---](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/ML/NCA/)
+
+<center><iframe width="560" height="315" src="https://www.youtube.com/embed/q9j3lea8Tvs?si=h7njjLrwZCiUpwuN" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></center>
+
+I always wanted to recreate the results of the [Growing Neural Cellular Automata](https://distill.pub/2020/growing-ca/) article, as the way the model worked was very similar to [some](https://www.shadertoy.com/view/Wt2BR1) shadertoys I did!
+
+While implementing it there were some problems with unrolled iterations, the number of kernels got so huge some of the fused ones had more than supported buffers, which led to compilation fail. I needed to restrict fusion manually for this to not happen. Ideally I'd want the compiler to be capable to take gradients of loops natively so that it doesn't generate a thousand kernels, but thats for the future I guess. But right now I keep the iteration count at around 30. The original used 60-90 as far as I remember though. Increasing the fire rate does reduce the required iteration count tho, as it "technically" increases the effective time-step of the simulation.
+
+In my own implementation I did a few changes, notably I've added a laplacian input kernel, as it actually reduces checkerboard artifacts and improves converges quite drastically. Sobel kernels have a step size of 2*dx, while the laplacian kernel has dx which makes it more accurate. It can also now natively emulate diffusion equations, before it needed to do gradients of gradients to do that.
+
+While I was at it I also used the trained models to port it to Shadertoy, as there were only examples of neural texture CAs, not growing CAs, which are in my opinion more interesting.
+
+<center><iframe width="640" height="360" frameborder="0" src="https://www.shadertoy.com/embed/XXlyWr?gui=true&t=10&muted=true" allowfullscreen></iframe></center>
+
+
+More examples are in the [examples folder](https://github.com/MichaelMoroz/TensorFrost/tree/main/examples).
+
 # What's the current performance compared to other tensor libraries?
 
 I'll focus on comparing things that are easy to implement in both my library and in PyTorch/JAX. Things like the fluid sim or path tracer, I suspect, have no chance of running good if at all in PyTorch, JAX however might work fine with vmap, but I'm not sure. For these tests, I'll ignore these use cases, as they will not be easy to port to them anyway, given the quite different syntax (as I didn't write those vectorized, but more in "shader-like" code)
@@ -1314,6 +1338,26 @@ I suspect LLVM could still be put at the end of my compilation stages as an inte
 Right now the only documentation is provided in the [README.md](https://github.com/MichaelMoroz/TensorFrost/blob/main/README.md) file in the repository, in the future I should made a separate documentation page for this.
 
 The window handling functionality and ImGUI related python bindings are still very few, and ideally I'd want to pass all their functionality to Python, I'd really want a helping hand here, as these libraries are pretty gigantic.
+
+# Problems left to solve
+
+## Compilation time scales quadratically with Tensor Program size
+
+This is something that I have started to notice with the more complex projects that I tried to do here, like Variational Monte Carlo or Neural Cellular Automata. The number of generated kernels there reaches hundreds, and for NCA sometimes even thousands due to unrolled iteration loop.
+
+While this wasn't really an issue for most of the simpler stuff, and its usually bottlenecked by the shader/c++ compiler, this will become a problem for more serious projects in the future.
+
+The way the compiler is written is still very sub-optimal, and more at a research-grade state at the moment. Some operations over every kernel require a complete update of the IR which clearly will make it scale quadratically. This is clearly due to me not having the required experience to properly write a good data structure for a compiler, so ideally this would need to be rewritten again in the future.
+
+## Some performance issue are not obvious without using a profiler/debugger
+
+While ideally I would have wanted the compiler to generate optimal or close to optimal programs - this is still very much not the case, and some simple things like using/not using reshape might change the performance by an order of magnitude just due to some reductions now being over one dimension instead of several and the compiler not having a way to optimize this scenario (this was a problem in NCA). 
+
+This is mainly a problem of the compiler still being way too simple, and it can't optimize every single real edge case and will just prioritize fusing everying as much as possible.
+
+## Compiler tends to fall apart when trying to implement a completely new thing
+
+This was kind of expected to be honest, without a large enough set of tests it is almost guaranteed that it will fall apart at some edge cases, and the only way to fix this is just to make a whole lot of example projects which I'm currently working on bit by bit
 
 # Conclusion
 
