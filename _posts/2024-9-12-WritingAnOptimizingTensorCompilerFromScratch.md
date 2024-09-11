@@ -12,7 +12,7 @@ title: Writing an optimizing tensor compiler from scratch
 <center>
 <div markdown="1"> 
 
-*[Some of the more interesting pet projects I tried in TensorFrost](#examples-using-tensorfrost)* 
+*[Some of my more interesting pet projects in TensorFrost](#examples-using-tensorfrost)* 
 
 </div>
 </center>
