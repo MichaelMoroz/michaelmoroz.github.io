@@ -65,7 +65,7 @@ And right now I can actually say that at least to some partial degree it did wor
 
 <center><img src="{{ site.baseurl }}/images/standards.png" height="250px"></center>
 
-Let's go over things that pushed me into writing a library, as it might seem that "why would you even write a new library?", it will indeed take a inordinate amount of work to get it to a useful state, as I've already experienced. And why would I not just use an existing library, as there are seemingly thousands of them?
+It will indeed take a inordinate amount of work to make a library from scratch and get it to a useful state, as I've already experienced. Why would I not just use an existing library, as there are seemingly thousands of them? There are a few reasons mostly applicable to my use cases which make both using pure ML libraries or pure shaders annoying.
 
 ***1. Performance scales poorly for non-ML specific operations***
 
@@ -127,7 +127,7 @@ There are actually domain specific languages (DSLs) that allow you to write kern
 
 There is also [Slang](https://github.com/shader-slang/slang), which is quite different from all these from above, as its an improved shader language with added differentiability. It would be nice if it was widely supported. But its even more low level than something like Taichi.
 
-***4. No easy built-in way to make real-time visualizations with optional interactivity***
+***4. ML libraries don't have an easy built-in way to make real-time visualizations with optional interactivity***
 
 When I want to do some advanced visualizations in Python, the options that are available in ML libraries are often hilariously bad. Usually you just end up making a bunch of matplotlib plots, which are not only slow, if you want to render like hundreds of millions of points or an animation, but also not interactive. (They are fine for papers tho)
 
@@ -137,9 +137,11 @@ Though, while I am stating these things, most large ML models are simply not vis
 
 *PS. Taichi actually does have a way to output a window, pull events, render things from GPU buffers, etc*
 
-***5. Some simulation and graphics applications can benefit from a more high level description***
+***5. Writing simulations or graphics in a high-level language is could be much easier to iterate on rather than in pure shaders***
 
 On the other side, in the world of real-time simulations and graphics, I've written custom kernels for every specific algorithm something needed: radix sorts, multigrid Poisson equation solver, numerical integrators, etc. So when I'm prototyping or having a new idea how to optimize the algorithm globally, it can get annoying to make global changes in the code structure, since they usually require a partial rewrite, creating new kernels and so on, and I don't really see why this couldn't be automated from higher-level operations.
+
+---
 
 In the end I was wondering: can I somehow combine the best of both worlds? 
 Being able to do both Numpy-like operations while also doing more shader-like things in one place sounds somewhat impossible on paper, but I thought that maybe if you tuned the kernel generation algorithm to specifically be optimal for shader-like operation it might at least work for my use cases? Afterwards I could still support ML use cases well enough even if I just shoehorned the matmul/reduction/convolution kernels separately.
