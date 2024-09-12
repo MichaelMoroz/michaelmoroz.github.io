@@ -144,6 +144,8 @@ In the world of real-time graphics, you can render those points at 60fps, and yo
 
 Though, while I am stating these things, most large ML models are simply not visualizable in real time, and the ones that are, are usually not easy to usefully interpret. Visualizations are usually most applicable to the intersection of ML/Physics/Graphics, like NERFs, diffusion, neural implicit representations, etc. But I still think that even changing hyperparameters in real time and seeing its result on the training loss can also be somewhat interesting, though you do need the model to be rather performant for that.
 
+The lack of a way to output graphical data from these libraries is even more annoying when you remember that GPU's are called **Graphics** Processing Units, not Tensor Processing Units. And they have all the required hardware to work with and output graphics.
+
 *PS. Taichi actually does have a way to output a window, pull events, render things from GPU buffers, etc*
 
 ***5. Writing simulations or graphics in a high-level language is could be much easier to iterate on rather than in pure shaders***
