@@ -130,7 +130,7 @@ def mandelbulb_sdf(pos, iter_num=mandelbulb_iter_num, power=mandelbulb_power):
 
 ***3. Extending ML libraries with custom high-performance kernels requires using external tools/APIs like CUDA or Triton***
 
-Usually, when hitting a performance bottleneck, you have to write a custom CUDA kernels, which is doable, but quite inconvenient, as it forces you to use separate environments, CUDA and Python.
+Usually, when hitting a performance bottleneck, you have to write custom CUDA kernels, which is doable, but quite inconvenient, as it forces you to use separate environments, CUDA and Python.
 
 There are actually domain specific languages (DSLs) that allow you to write kernels in relatively high-level Python, like [Taichi](https://www.taichi-lang.org/) or [Nvidia's Warp](https://github.com/NVIDIA/warp), they are really nice for simulations or graphics, and Taichi specifically is fine tuned for high performance physics simulations and even has built in automatically optimized sparse grids. And while they are also differentiable, they still are a bit off from what I would consider "perfect", as you don't have access to the giant library of ML operations that PyTorch has for example. Of course you can still write ML using them if you really want, there are some[ Nerf implementations for Taichi](https://github.com/taichi-dev/taichi-nerfs), but they require much more code to represent. As a compromise you could also interoperate them with PyTorch for example, but once again, it makes it less convenient to work with. I can also mention [Triton](https://github.com/triton-lang/triton) here, but it's usually used more like a backend for other libraries (like PyTorch) rather than a standalone DSL, at least as far as I have seen.
 
