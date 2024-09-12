@@ -42,11 +42,7 @@ In this blog post I want to talk about the research and development results for 
   - [N-body simulation](#n-body-simulation)
   - [MNIST with a convolutional network](#mnist-with-a-convolutional-network)
   - [What about some more advanced models?](#what-about-some-more-advanced-models)
-- [Future improvements](#future-improvements)
-- [Problems left to solve](#problems-left-to-solve)
-  - [Compilation time scales quadratically with Tensor Program size](#compilation-time-scales-quadratically-with-tensor-program-size)
-  - [Some performance issue are not obvious without using a profiler/debugger](#some-performance-issue-are-not-obvious-without-using-a-profilerdebugger)
-  - [Compiler tends to fall apart when trying to implement a completely new thing](#compiler-tends-to-fall-apart-when-trying-to-implement-a-completely-new-thing)
+- [What is left to do](#what-is-left-to-do)
 - [Conclusion](#conclusion)
 
 I started working on this library around 14 months ago, initially I didn't really plan to do much more than a few matrix operations for an optimization algorithm I wanted to implement in Unity, but there were quite a few things that I wanted to have on top of all of this and it sidetracked me into a writing an entire compiler (hello scope creep 👋). 
@@ -73,7 +69,7 @@ Of course, nothing stops me from using your usual ML libraries like PyTorch or J
 
 Most of the Tensor compiler research that I've seen focuses on ML bottlenecks, like efficiently utilizing cache, correctly aligning data for maximum performance of matrix multiplications, convolutions etc. Those usually aren't a bottleneck when dealing with simulations or rendering, but the dynamic nature of the code and complexity is.
 
-***2. Dynamic control flow is very hard to represent in classic ML libraries***
+***2. Dynamic control flow is very hard to implement in classic ML libraries***
    
 The performance is actually not the only issue when writing simulations or graphics, control flow can be very prevalent, but unfortunately it's quite inconvenient to express in these libraries, if even possible, as native loops in JAX for example, require doing stuff like: 
 
@@ -142,7 +138,7 @@ Though, while I am stating these things, most large ML models are simply not vis
 On the other side, in the world of real-time simulations and graphics, I've written custom kernels for every specific algorithm something needed: radix sorts, multigrid Poisson equation solver, numerical integrators, etc. So when I'm prototyping or having a new idea how to optimize the algorithm globally, it can get annoying to make global changes in the code structure, since they usually require a partial rewrite, creating new kernels and so on, and I don't really see why this couldn't be automated from higher-level operations.
 
 In the end I was wondering: can I somehow combine the best of both worlds? 
-Being able to do both numpy-like operations while also doing more shader-like things in one place sounds somewhat impossible on paper, but I thought that maybe if you tuned the kernel generation algorithm to specifically be optimal for shader-like operation it might at least work for my use cases? Afterwards I could still support ML use cases well enough even if I just shoehorned the matmul/reduction/convolution kernels separately.
+Being able to do both Numpy-like operations while also doing more shader-like things in one place sounds somewhat impossible on paper, but I thought that maybe if you tuned the kernel generation algorithm to specifically be optimal for shader-like operation it might at least work for my use cases? Afterwards I could still support ML use cases well enough even if I just shoehorned the matmul/reduction/convolution kernels separately.
 
 And even if it is impossible, combining everything into a single language would be nice, because the GPU development infrastructure is scattered all over the place, some futures are available only in some places, while others are not, they can sometimes not even be interoperable. The development environments are completely separate, there are ML-specific debug tools on Linux, and graphics API specific debug tools on Windows only - and all of these things are using the same hardware - the GPU!
 
@@ -802,7 +798,7 @@ Linux users win with their `gcc` in that regard, which is usually also already i
 
 In the future I want to add Python as an alternative host language (you could also use CUDA too!), as it will speedup the compile times up to 100x, with only slight performance overhead.
 
-These `TensorProgram` objects take and output `TensorMemory` buffer objects (you can also give numpy arrays, or `tf.Modules` as arguments), which can be created from numpy arrays like this.
+These `TensorProgram` objects take and output `TensorMemory` buffer objects (you can also give Numpy arrays, or `tf.Modules` as arguments), which can be created from Numpy arrays like this.
 
 ```python
 A = tf.tensor(np.zeros([100, 100], dtype=np.float32))
@@ -816,10 +812,10 @@ C = matmul_compiled(A, B)
 
 As you can see the inputs are given to the compiled function in the same order as they were executed in the compiled function.
 
-To get the result back into a numpy array, you can use the `numpy` property:
+To get the result back into a Numpy array, you can use the `Numpy` property:
 
 ```python
-Cnp = C.numpy
+Cnp = C.Numpy
 ```
 
 ### Modules
@@ -922,7 +918,7 @@ X = tf.tensor(np.zeros([100, 100], dtype=np.float32))
 Y = tf.tensor(np.zeros([100, 10], dtype=np.float32))
 out = step(X, Y, opt)
 opt.update_parameters(res[:-1])
-loss = res[-1].numpy[0]
+loss = res[-1].Numpy[0]
 ```
 
 I've also recently added regularizers (reg_type = tf.regularizers.l2 or tf.regularizers.l1) and clipping (tf.clipping.norm or just tf.clipping.clip for a clamp), which can be added like:
@@ -962,7 +958,7 @@ while not tf.window.should_close(): #window will close if you press the close bu
     #exectute a TensorFrost TensorProgram that outputs a [-1, -1, 3] float32 tensor
     img = render_image(...)
 
-    #you could also just provide a numpy array as tf.tensor(), this is usually slower tho, as it requires a GPU upload
+    #you could also just provide a Numpy array as tf.tensor(), this is usually slower tho, as it requires a GPU upload
 
     #display the image (will be stretched to the window size with nearest neighbor interpolation)
     tf.window.render_frame(img)
@@ -1320,17 +1316,21 @@ As a bonus I captured the TensorFrost 16-128-512 pass in Nvidia Nsight, with deb
 
 While I could have also tested something like LLM's or diffusion models, I can pretty much guarantee that for anything that has its bottleneck in matrix multiplication or other linear algebra algorithms TensorFrost will very likely lose by a lot, at least [without implementing automation of more advanced optimizations](https://siboehm.com/articles/22/CUDA-MMM) or without just calling external BLAS libraries like cuBLAS, which is doable, but I unfortuanately don't have enough time to do that, as I focus more on just the compiler itself because its more important for my use cases.
 
-# Future improvements
+# What is left to do
+
+***1. Better handling for small constant shapes***
 
 One of the things that quite often happens with writing vectorized code for simple particle simulations, like the simple N-body example from above, is that all the vector variables are 3d, and can easily be stored in registers, but the current compiler will generate it as a [..., a, b, 3] shaped kernel with a lot of duplicated arithmetic (unless you create your own vec class that operates only on scalars). This is something that could be optimized in the future, by generating the initial kernel with a smaller shape, like [..., a, b, 1] and then unrolling the dimensions that are broadcast compared to the kernel's shape. 
 
 Even more advanced optimizations can be performed from that starting point, like automatic caching of data into groupshared memory. Such a caching would require automatic read/write range analysis, for that I will need to implement a VM that executes the operations and computes the range of values they can have with interval arithmetic (perhaps more complex analysis too).
 
+***2. Improved workgroup utilization***
+
 At the moment the IR does not have a representation for groupshared memory, which is a big bottleneck for large matrix multiplications, and can be quite useful for optimizing some other algorithms, like [FFT](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Rendering/fft2d.ipynb)/[sort](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Algorithms/sorting_tests.py)/[convolutions](https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Rendering/convolution.py).
 
 Kernels can be additionally fused at the workgroup level as a post kernel fusion pass, which is quite complicated, and requires additional groupshared memory with group syncs, and a correct estimation of the group size, but for small neural networks it could be a massive speedup.
 
-Another thing that is perhaps very high in the priority list right now is to implement repeating computation eliminator, its quite troublesome due to requiring some way to compare entire computation chains (by making a specific computation result node have a unique number), but would remove quite a lot of redundant cruft from the generated kernels.
+***3. Automatic vectorization***
 
 One nice thing, that I would like to borrow from JAX is `vmap`. Writing particle simulations in vectorized form often annoyingly require a lot of `squeeze` and `unsqueeze` operations, which could be automated if you vectorized a single particle calculation into a target shape. In fact, I could also make the explicit `kernel` node usage assume that all its children are scalar (if not - unroll), and it would also behave similarly to `vmap` with the exception of it forcibly creating a single kernel no matter what. Implementing `vmap` is, I supect, not to difficult, as it only requires padding all the shapes of the child operation with the given shape (with some peculiarities). Syntactically it could look like
 
@@ -1340,31 +1340,60 @@ with tf.vmap(shape) as (i,j,...):
 ```
 With i,j,k being scalar at trace time, then padded with given shape.
 
-I suspect LLVM could still be put at the end of my compilation stages as an intermediate between final code generation, to do some final optimizations.
+***4. Better IR?***
+
+Another thing that is perhaps very high in the priority list right now is to implement repeating computation eliminator, its quite troublesome due to requiring some way to compare entire computation chains (by making a specific computation result node have a unique number), but would remove quite a lot of redundant cruft from the generated kernels.
+
+And on top of that the compilation time scales quadratically with Tensor Program size right now. This is something that I have started to notice with the more complex projects that I tried to do here, like Variational Monte Carlo or Neural Cellular Automata. The number of generated kernels there reaches hundreds, and for NCA sometimes even thousands due to unrolled iteration loop.
+
+While this wasn't really an issue for most of the simpler stuff, where it was usually bottlenecked by the shader/c++ compiler, this will become a problem for more serious projects in the future.
+
+The way the compiler is written is still very sub-optimal, and more at a research-grade state at the moment. Some operations over every kernel require a complete update of the IR which clearly will make it scale quadratically. This is clearly due to me not having the required experience to properly write a good data structure for a compiler.
+
+So perhaps replacing my own IR with LLVM could make more sense in the long run, though I'm still not sure about the specifics, and how easy it would be to integrate.
+
+***5. Documentation***
 
 Right now the only documentation is provided in the [README.md](https://github.com/MichaelMoroz/TensorFrost/blob/main/README.md) file in the repository, in the future I should made a separate documentation page for this.
 
-The window handling functionality and ImGUI related python bindings are still very few, and ideally I'd want to pass all their functionality to Python, I'd really want a helping hand here, as these libraries are pretty gigantic.
+***6. Easier debugging / profiling***
 
-# Problems left to solve
+While ideally I would have wanted the compiler to generate optimal or close to optimal programs - this is still very much not the case, and some simple things like using/not using reshape might change the performance by an order of magnitude just due to, for example, some reductions now being over one dimension instead of several and the compiler not having a way to optimize this scenario (this was a problem in NCA). 
 
-## Compilation time scales quadratically with Tensor Program size
+Ideally I'd expose the compiled result in a more readible / easy to access way. Perhaps something like giving the ability to compile the program purely into its IR, so that you can edit it, for example.
 
-This is something that I have started to notice with the more complex projects that I tried to do here, like Variational Monte Carlo or Neural Cellular Automata. The number of generated kernels there reaches hundreds, and for NCA sometimes even thousands due to unrolled iteration loop.
+***7. More test cases***
 
-While this wasn't really an issue for most of the simpler stuff, and its usually bottlenecked by the shader/c++ compiler, this will become a problem for more serious projects in the future.
+Compiler tends to fall apart when trying to implement a completely new thing right now - this was kind of expected to be honest, without a large enough set of tests it is almost guaranteed that it will fall apart at some edge cases, and the only way to fix this is just to make a whole lot of example projects which I'm currently working on bit by bit
 
-The way the compiler is written is still very sub-optimal, and more at a research-grade state at the moment. Some operations over every kernel require a complete update of the IR which clearly will make it scale quadratically. This is clearly due to me not having the required experience to properly write a good data structure for a compiler, so ideally this would need to be rewritten again in the future.
+***8. Improve the GLFW/ImGui integration***
 
-## Some performance issue are not obvious without using a profiler/debugger
+I only passed the bare minimum for these to be able to make basic windows and GUI, but ideally all their features should be exposed. This is quite a large task and will take a lot of time I suspect. I also want to integrate ImPlot for much better plots, as for real-time use cases I think those will be more useful than matplotlib.
 
-While ideally I would have wanted the compiler to generate optimal or close to optimal programs - this is still very much not the case, and some simple things like using/not using reshape might change the performance by an order of magnitude just due to some reductions now being over one dimension instead of several and the compiler not having a way to optimize this scenario (this was a problem in NCA). 
+***9. Generate python code for the host part of the program***
 
-This is mainly a problem of the compiler still being way too simple, and it can't optimize every single real edge case and will just prioritize fusing everying as much as possible.
+As usually the compilation bottleneck is the C++ compiler, I'm considering to just use Python for the kernel dispatch code. This might reduce the performance a bit, but for faster iteration this is certainly going to be useful.
 
-## Compiler tends to fall apart when trying to implement a completely new thing
+***10. A whole bunch of basic Numpy functionality is still missing***
 
-This was kind of expected to be honest, without a large enough set of tests it is almost guaranteed that it will fall apart at some edge cases, and the only way to fix this is just to make a whole lot of example projects which I'm currently working on bit by bit
+Things like concatenation/stacking/splitting/repeat/etc does not exist yet, and I currently emulate them manually by reindexing, which works but is tedious.
+
+Something like a random number generation module would be quite useful. As they are stateful I want to expose all their internals to the user so I think making them in the form of a `tf.Module` makes sense. So something like `rng = tf.random.rng_module(type=..., seed=...)` I suppose. Which you use then like `rng.unform(2.0,3.0,shape)` or other. You could then pass them around as parts of bigger modules together with their seeds.
+
+Linear algebra algorithms, like QR, SVD, LU, eigendecomposition, inverse, determinants, etc, are not part of the library, which is an issue for more complex data analysis and algorithms. Unfortunately these are *very* hard to implement from scratch, espectially with any resemblence of performance or numerical precision. So I suppose I have no choice but to use an external library for these in the future.
+
+And there are other ones like FFT, sorting etc. Tho I have them implemented in the examples, I just need to integrate them into the library.
+
+***11. More tensor formats***
+
+Right now we only have int32, uint32, float32 and bool, which is not many. Something like custom quantized formats that Taichi provides would be very nice to have. 
+Adding the option to pack the last dimension if its constant and small with custom packing would also allow quantized vectors of sorts, the shared exponent format is very useful for simulations.
+
+Perhaps also specifying the behaviour of the tensor on out-of-bounds reads/writes could be nice to add to the format, as the default one is just clamp.
+
+Adding support for HW supported GPU texture formats would be nice for rendering algoirhms, as tensors which are represented as textures will have performance benefits for render-like use cases, not to mention the optional ability to use the HW linear sampler. 
+
+*There are probably a million more things that I forgot, but even without those, this is enough work for years to come.*
 
 # Conclusion
 
