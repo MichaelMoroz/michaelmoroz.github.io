@@ -59,7 +59,7 @@ So in this library, I hoped to somehow extend the applicability range of a Tenso
 
 And right now I can actually say that at least to some partial degree it did work out. Currently the library is something of a mix of slightly more low-level Numpy-like operations with shader-like control-flow and operations (most of the built-in scalar shader functions are passed through to Python). In terms of where it stands right now, its more low-level than something like JAX or PyTorch, but still not as low-level as Taichi as you still technically operate on something similar to tensors.
 
-<center><img src="{{ site.baseurl }}/images/high_low.PNG" height="250px"></center>
+<center><img src="{{ site.baseurl }}/images/high_low.PNG" height="150px"></center>
 
 # So why make a new library?
 
@@ -73,7 +73,7 @@ Of course, nothing stops me from using your usual ML libraries like PyTorch or J
 
 Most of the Tensor compiler research that I've seen focuses on ML bottlenecks, like efficiently utilizing cache, correctly aligning data for maximum performance of matrix multiplications, convolutions etc. Those usually aren't a bottleneck when dealing with simulations or rendering, but the dynamic nature of the code and complexity is.
 
-***2. Dynamic control flow is very hard to implement in classic ML libraries***
+***2. Dynamic control flow is very tedious (if possible) to implement in classic ML libraries***
    
 The performance is actually not the only issue when writing simulations or graphics, control flow can be very prevalent, but unfortunately it's quite inconvenient to express in these libraries, if even possible, as native loops in JAX for example, require doing stuff like: 
 
