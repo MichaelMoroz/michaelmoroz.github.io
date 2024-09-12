@@ -171,7 +171,9 @@ If you tried to write algorithms, like the ones I write in Shadertoy, you will e
 
 ## First prototype
 
-When I initally started prototyping the operation graph compiler in C# in Unity (not exactly your typical place for a compiler prototype, I know), I kept the graph just as a simple Directed Acyclic Graph (DAG), where each node was a single operation with some tensor shape. When I began testing the kernel clustering even on simple physics or rendering, the clustering algorithm quickly started to get out of hand, as in the example below. 
+When I initally started prototyping the operation graph compiler in C# in Unity (not exactly your typical place for a compiler prototype, I know), I kept the graph just as a simple Directed Acyclic Graph (DAG), where each node was a single operation with some tensor shape. When I began testing the kernel clustering even on simple physics or rendering, the clustering algorithm quickly started to get out of hand.
+
+Here is an example of a compiled graph with the kernels clusterized.
 
 <center><img src="{{ site.baseurl }}/images/fluidgraph.png" height="400px"></center>
 

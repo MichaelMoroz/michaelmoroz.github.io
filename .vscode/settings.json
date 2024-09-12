@@ -3,6 +3,7 @@
         "autodiff",
         "backpropagation",
         "broadcastable",
+        "clusterized",
         "Eulerian",
         "groupshared",
         "megakernel",
