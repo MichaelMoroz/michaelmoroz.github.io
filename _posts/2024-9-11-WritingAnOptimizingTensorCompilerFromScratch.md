@@ -157,7 +157,7 @@ On the other side, in the world of real-time simulations and graphics, I've writ
 In the end I was wondering: can I somehow combine the best of both worlds? 
 Being able to do both Numpy-like operations while also doing more shader-like things in one place sounds somewhat impossible on paper, but I thought that maybe if you tuned the kernel generation algorithm to specifically be optimal for shader-like operation it might at least work for my use cases? Afterwards I could still support ML use cases well enough even if I just shoehorned the matmul/reduction/convolution kernels separately.
 
-And even if it is impossible, combining everything into a single language would be nice, because the GPU development infrastructure is scattered all over the place, some futures are available only in some places, while others are not, they can sometimes not even be interoperable. The development environments are completely separate, there are ML-specific debug tools on Linux, and graphics API specific debug tools on Windows only - and all of these things are using the same hardware - the GPU!
+And even if it is impossible, combining everything into a single language would be nice, because the GPU development infrastructure is scattered all over the place, some features are available only in some places, while others are not, they can sometimes not even be interoperable. The development environments are completely separate, there are ML-specific debug tools on Linux, and graphics API specific debug tools on Windows only - and all of these things are using the same hardware - the GPU!
 
 # Architecture
 
