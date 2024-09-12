@@ -1229,7 +1229,7 @@ The second part of this example is the rendering, which was also written purely 
 
 I always wanted to recreate the results of the [Growing Neural Cellular Automata](https://distill.pub/2020/growing-ca/) article, as the way the model worked was very similar to [some](https://www.shadertoy.com/view/Wt2BR1) shadertoys I did!
 
-While implementing it there were some problems with unrolled iterations, the number of kernels got so huge some of the fused ones accessed more buffers than OpenGL supports, which led to a compilation fail. I manually restricted fusion for this to not happen by doing a "hack". I did that by introducing a `.stop_fusion()` method, which is absolutely hilarious given fusion was our initial goal. I guess it would be better to have an automatic way to restric kernel size in the future. 
+While implementing it there were some problems with unrolled iterations, the number of kernels got so huge some of the fused ones accessed more buffers than OpenGL supports, which led to a compilation fail. I manually restricted fusion for this to not happen by doing a "hack". I did that by introducing a `.stop_fusion()` method, which is absolutely hilarious given fusion was our initial goal. I guess it would be better to have an automatic way to restrict kernel size in the future. 
 
 Ideally I'd want the compiler to be capable to take gradients of loops natively so that it doesn't generate a thousand kernels, but thats for the future I guess. Right now I keep the iteration count at around 30, while the original used 60-90 as far as I remember. Increasing the fire rate does reduce the required iteration count, as it "technically" increases the average time-step of the simulation, so I did just that.
 
