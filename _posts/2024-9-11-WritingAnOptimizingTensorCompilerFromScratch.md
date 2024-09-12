@@ -815,7 +815,7 @@ As you can see the inputs are given to the compiled function in the same order a
 To get the result back into a Numpy array, you can use the `Numpy` property:
 
 ```python
-Cnp = C.Numpy
+Cnp = C.numpy
 ```
 
 ### Modules
@@ -918,7 +918,7 @@ X = tf.tensor(np.zeros([100, 100], dtype=np.float32))
 Y = tf.tensor(np.zeros([100, 10], dtype=np.float32))
 out = step(X, Y, opt)
 opt.update_parameters(res[:-1])
-loss = res[-1].Numpy[0]
+loss = res[-1].numpy[0]
 ```
 
 I've also recently added regularizers (reg_type = tf.regularizers.l2 or tf.regularizers.l1) and clipping (tf.clipping.norm or just tf.clipping.clip for a clamp), which can be added like:
