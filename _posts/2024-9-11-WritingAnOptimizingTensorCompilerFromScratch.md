@@ -3,11 +3,11 @@ layout: post
 title: Writing an optimizing tensor compiler from scratch 
 ---
 
-<a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/fluid_simulation.ipynb"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/fluid_sim.gif?raw=true" height="192px"></a>
-<a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/GUI/interactive_path_tracer.py"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/path_tracer.gif?raw=true" height="192px"></a>
-<a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Simulation/n-body.ipynb"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/n_body.gif?raw=true" height="192px"></a>
-<a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Rendering/neural_embed.ipynb"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/neural_embed.gif?raw=true" height="192px"></a>
-<a href="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/ML/NCA/"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/nca.gif?raw=true" height="192px"></a>
+<a href="https://michaelmoroz.github.io/WritingAnOptimizingTensorCompilerFromScratch/#fluid-simulation"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/fluid_sim.gif?raw=true" height="192px"></a>
+<a href="https://michaelmoroz.github.io/WritingAnOptimizingTensorCompilerFromScratch/#fractal-path-tracer"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/path_tracer.gif?raw=true" height="192px"></a>
+<a href="https://michaelmoroz.github.io/WritingAnOptimizingTensorCompilerFromScratch/#n-body-sph-with-a-custom-sphere-rasterizer"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/n_body.gif?raw=true" height="192px"></a>
+<a href="https://michaelmoroz.github.io/WritingAnOptimizingTensorCompilerFromScratch/#texture-embedder-with-small-neural-network"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/neural_embed.gif?raw=true" height="192px"></a>
+<a href="https://michaelmoroz.github.io/WritingAnOptimizingTensorCompilerFromScratch/#neural-cellular-automata"><img src="https://github.com/MichaelMoroz/TensorFrost/blob/main/examples/Demos/nca.gif?raw=true" height="192px"></a>
 In this blog post I want to talk about the research and development results for a library that I started working on more than a year ago - [TensorFrost](https://github.com/MichaelMoroz/TensorFrost). Under the hood it's a static optimizing tensor compiler with a focus on being able to do more "shader-like" things while still keeping the ability to do high level linear algebra for ML in Numpy-like syntax with automatic differentiation support.
 
 
