@@ -1405,6 +1405,8 @@ Adding support for HW supported GPU texture formats would be nice for rendering 
 
 Making a compiler with practically 0 compiler development experience was certainly quite the gamble. I'm 100% sure there are some fundamental architectural decisions that I did wrong, the main of it being perhaps writing the IR from scratch, as I had no clue how LLVM worked even tho I knew that it is used everywhere, and probably for a very good reason. Writing the compiler like that took an astounding amount of time, while initially I've expected a few months of work, now I'm at 14 months and some core features I wanted are still missing.
 
+Quite often it was hard to convince myself that this is a useful use of my time, the scope of work is so huge that making progress felt like an eternity, and I could have instead spend that time on making other pet projects. Even now, I can not easily explain why exactly I wanted to make a library/compiler like this, as there are hundreds of little things that come together to make it useful for what I do, I hope this blog post explains at least some part of my thought process here.
+
 Right now the library is at the point of being somewhat usable. In fact, given the performance tests from above, if you properly improved the performance of the algorithmic primitives I use, like reductions and matmuls, and added more backends like CUDA, this library or a new version of it might become a viable choice for more common ML applications.
 
 If anyone wants to help me with development, PR's are welcome! There is still like a million things missing, a million bugs waiting to be found, and by myself it would take a few more years for it to get into a more mature state.
