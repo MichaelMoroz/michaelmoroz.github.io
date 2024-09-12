@@ -1409,7 +1409,7 @@ Quite often it was hard to convince myself that this is a useful use of my time,
 
 Right now the library is at the point of being somewhat usable. In fact, given the performance tests from above, if you properly improved the performance of the algorithmic primitives I use, like reductions and matmuls, and added more backends like CUDA, this library or a new version of it might become a viable choice for more common ML applications.
 
-If anyone wants to help me with development, PR's are welcome! There is still like a million things missing, a million bugs waiting to be found, and by myself it would take a few more years for it to get into a more mature state.
+If anyone wants to help me with development, PR's are welcome! There are still like a million things missing, lots of hidden bugs waiting to be found, and by myself it would take a few more years for it to get into a more mature state.
 
 ---
 
