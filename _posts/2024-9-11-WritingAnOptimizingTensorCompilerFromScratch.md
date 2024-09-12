@@ -21,6 +21,7 @@ title: Writing an optimizing tensor compiler from scratch
     </th>
   </tr>
 </table>
+
 ---
 
 *For documentation on basic functionality, read the [README](https://github.com/MichaelMoroz/TensorFrost/blob/main/README.md) file in the repo.*
