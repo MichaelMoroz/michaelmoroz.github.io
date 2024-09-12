@@ -63,7 +63,7 @@ And right now I can actually say that at least to some partial degree it did wor
 
 # So why make a new library?
 
-<center><img src="{{ site.baseurl }}/images/standards.png" height="250px"></center>
+<center><a href="https://xkcd.com/927/"><img src="{{ site.baseurl }}/images/standards.png" height="250px"></a></center>
 
 It will indeed take a inordinate amount of work to make a library from scratch and get it to a useful state, as I've already experienced. Why would I not just use an existing library, as there are seemingly thousands of them? There are a few reasons mostly applicable to my use cases which make both using pure ML libraries or pure shaders annoying.
 
