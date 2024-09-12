@@ -11,6 +11,8 @@ title: Writing an optimizing tensor compiler from scratch
 In this blog post I want to talk about the research and development results for a library that I started working on more than a year ago - [TensorFrost](https://github.com/MichaelMoroz/TensorFrost). Under the hood it's a static optimizing tensor compiler with a focus on being able to do more "shader-like" things while still keeping the ability to do high level linear algebra for ML in Numpy-like syntax with automatic differentiation support.
 
 
+---
+
 *For documentation on basic functionality, read the [README](https://github.com/MichaelMoroz/TensorFrost/blob/main/README.md) file in the repo.*
 
 - [So why make a new library?](#so-why-make-a-new-library)
@@ -44,6 +46,8 @@ In this blog post I want to talk about the research and development results for 
   - [What about some more advanced models?](#what-about-some-more-advanced-models)
 - [What is left to do](#what-is-left-to-do)
 - [Conclusion](#conclusion)
+
+---
 
 I started working on this library around 14 months ago, initially I didn't really plan to do much more than a few matrix operations for an optimization algorithm I wanted to implement in Unity, but there were quite a few things that I wanted to have on top of all of this and it sidetracked me into a writing an entire compiler (hello scope creep 👋). 
 
@@ -1397,14 +1401,14 @@ Adding support for HW supported GPU texture formats would be nice for rendering 
 
 # Conclusion
 
-First of all, given that it took me 14th month just to get to this point, the conclusion is simple: unless you have a year of free time - don't make a new machine learning library from scratch.
+Making a compiler with practically 0 compiler development experience was certainly quite the gamble. I'm 100% sure there are some fundamental architectural decisions that I did wrong, the main of it being perhaps writing the IR from scratch, as I had no clue how LLVM worked even tho I knew that it is used everywhere, and probably for a very good reason. Writing the compiler like that took an astounding amount of time, while initially I've expected a few months of work, now I'm at 14 months and some core features I wanted are still missing.
 
-Jokes aside, it is actually a really interesting learning experience. In fact, given the performance tests from above, if you properly improved the performance of the algorithmic primitives I use, like reductions and matmuls, and added more backends like CUDA, this library or a new version of it might become a viable choice for actual ML applications.
+Right now the library is at the point of being somewhat usable. In fact, given the performance tests from above, if you properly improved the performance of the algorithmic primitives I use, like reductions and matmuls, and added more backends like CUDA, this library or a new version of it might become a viable choice for more common ML applications.
 
 If anyone wants to help me with development, PR's are welcome! There is still like a million things missing, a million bugs waiting to be found, and by myself it would take a few more years for it to get into a more mature state.
 
 ---
 
 <details><summary>Why TensorFrost?</summary><p>
-The name was chosen from "tensor" + my surname translated from Ukrainian to English. I know, its not super creative, given how many TensorSomething already exist. Also there is the funny problem that LLM's mistakingly assume its TensorFlow. Perhaps I should do `import TensorFrost as fr` instead of `as tf` in my examples.
+The name was chosen from "tensor" + my surname translated from Ukrainian to English. I know, its not super creative, given how many "TensorSomething" already exist. Also there is the funny problem that LLM's mistakingly assume its TensorFlow. Perhaps I should do `import TensorFrost as fr` instead of `as tf` in my examples.
 </p></details>
